@@ -15,7 +15,6 @@ function App() {
       <br />
       <AccessAlarmIcon />
       <ThreeDRotation />
-      <br />
       <HomeIcon color="primary" />
       <HomeIcon color="secondary" />
       <HomeIcon color="success" />
