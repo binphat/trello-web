@@ -28,7 +28,7 @@ function AppBar() {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <AppsIcon sx={{ color: 'primary.main' }} />
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <SvgIcon component={IconLogo} inheritViewBox sx={{ color:'primary.main' }} />
+          <SvgIcon component={IconLogo} fontSize='small' inheritViewBox sx={{ color:'primary.main' }} />
           <Typography variant='span' sx={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'primary.main' }}>TeamUp</Typography>
         </Box>
         <Workspaces />
@@ -41,12 +41,12 @@ function AppBar() {
         <TextField id="outlined-search" label="Search..." type="search" size='small'/>
         <ModeSelect />
         <Badge color="secondary" variant="dot" sx={{ cursor: 'pointer' }}>
-          <Tooltip title="Notification">
-            <NotificationsNoneIcon />
+          <Tooltip title="Notifications">
+            <NotificationsNoneIcon sx={{ color: 'primary.main' }}/>
           </Tooltip>
         </Badge>
         <Tooltip title="Help">
-          <HelpOutlineIcon sx={{ cursor: 'pointer' }} />
+          <HelpOutlineIcon sx={{ cursor: 'pointer', color: 'primary.main' }} />
         </Tooltip>
         <Profile />
       </Box>
