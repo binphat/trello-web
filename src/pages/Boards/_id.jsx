@@ -1,6 +1,6 @@
 import Container from '@mui/material/Container'
-import AppBar from '../../components/AppBar'
-import BoardBar from '../../pages/Boards/BoardBar'
+import AppBar from '~/components/AppBar'
+import BoardBar from './BoardBar'
 import BoardContent from './BoardContent'
 
 function Board() {
@@ -12,5 +12,4 @@ function Board() {
     </Container>
   )
 }
-
 export default Board
