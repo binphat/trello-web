@@ -33,7 +33,7 @@ function Profile() {
           aria-expanded={open ? 'true' : undefined}
         >
           <Avatar
-            sx={{ width: 30, height: 30 }}
+            sx={{ width: 34, height: 34 }}
             alt='binphat'
             src="https://scontent.fhan3-3.fna.fbcdn.net/v/t39.30808-6/481899753_1388374892524921_8380757945675032362_n.jpg?_nc_cat=101&ccb=1-7&_nc_sid=6ee11a&_nc_eui2=AeGMTu8bOiFf-OQ0uc8Z26PmEnmcvQ_uQ0QSeZy9D-5DRHWDD4v2qgIpS1NtVFMgV4VfDtOqR9o0DIJ72S8zCzlC&_nc_ohc=f7uLbOfK2c0Q7kNvgGGWwnB&_nc_oc=Adien_OITyPJ0IBWab77PS9nhNEvXzsbykyMjUN8-1oAFrmDLMESO7AF1TZoOQXeWTo&_nc_zt=23&_nc_ht=scontent.fhan3-3.fna&_nc_gid=5HOCy0hTR6VTyRjOvMvn7w&oh=00_AYH3dYFFHF9TVUHfXbMhwAgbLeZP0oIkpbVcxfjyZpDEwA&oe=67DF164E"
           />
