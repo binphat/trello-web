@@ -7,7 +7,7 @@ import BoltIcon from '@mui/icons-material/Bolt'
 import FilterListIcon from '@mui/icons-material/FilterList'
 import Avatar from '@mui/material/Avatar'
 import AvatarGroup from '@mui/material/AvatarGroup'
-import { Tooltip } from '@mui/material'
+import Tooltip from '@mui/material/Tooltip'
 import Button from '@mui/material/Button'
 import PersonAddIcon from '@mui/icons-material/PersonAdd'
 
@@ -39,9 +39,13 @@ function BoardBar() {
       bgcolor: (theme) => (
         theme.palette.mode === 'dark' ? '#34495e' : '#1976d2'
       ),
-      borderBottom: '1px solid white'
+      borderBottom: '1px solid white',
+      '&::-webkit-scrollbar-track': {
+        m: 2
+      }
     }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2
+      }}>
         <Chip
           sx={MENU_STYLES}
           icon={<DashboardIcon />}
@@ -92,7 +96,10 @@ function BoardBar() {
               width: 34,
               height: 34,
               fontSize: 16,
-              border: 'none'
+              border: 'none',
+              color: 'white',
+              cursor: 'pointer',
+              '&:first-of-type': { bgcolor: '#a4b0be' }
             }
           }}
         >
