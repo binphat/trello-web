@@ -39,7 +39,6 @@ function BoardBar() {
       bgcolor: (theme) => (
         theme.palette.mode === 'dark' ? '#34495e' : '#1976d2'
       ),
-      borderBottom: '1px solid white',
       '&::-webkit-scrollbar-track': {
         m: 2
       }
@@ -105,7 +104,7 @@ function BoardBar() {
         >
           <Tooltip title='BinPhat'>
             <Avatar alt="BinPhat"
-              src="https://scontent.fsgn2-4.fna.fbcdn.net/v/t39.30808-6/481899753_1388374892524921_8380757945675032362_n.jpg?_nc_cat=101&ccb=1-7&_nc_sid=6ee11a&_nc_eui2=AeGMTu8bOiFf-OQ0uc8Z26PmEnmcvQ_uQ0QSeZy9D-5DRHWDD4v2qgIpS1NtVFMgV4VfDtOqR9o0DIJ72S8zCzlC&_nc_ohc=f7uLbOfK2c0Q7kNvgG2cfhV&_nc_oc=Adnu2nrYPcnlvLTbvUIqa81iq-odj30DOnR0OBbzXP3xEK9SVXqoDVbdSjUzB9RgW6c&_nc_zt=23&_nc_ht=scontent.fsgn2-4.fna&_nc_gid=R4Iw0WkNl6NQYhydUJrtow&oh=00_AYH_w5lyyK3z7GAkbPuqNlx008N7kdBMZNiYXAqCB4mMMQ&oe=67E02F8E"
+              src="https://cdn-media.sforum.vn/storage/app/media/anh-dep-116.jpg"
             />
           </Tooltip>
           <Tooltip title='BinPhat'>
