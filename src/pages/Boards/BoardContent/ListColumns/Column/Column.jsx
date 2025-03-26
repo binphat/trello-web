@@ -22,9 +22,8 @@ import { mapOrder } from '~/utils/sorts'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
-
 function Column({ column }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: column._id,
     data: { ...column }
   })
@@ -33,7 +32,12 @@ function Column({ column }) {
     // Nếu sử dụng CSS.Transform như docs sẽ lỗi kiểu strech
     // http://github.com/clauderic/dnd-kit/issues/117
     transform: CSS.Translate.toString(transform),
-    transition
+    transition,
+    // Chiều cao phải luôn đặt tối đa 100% để tránh lỗi khi kéo cột ngắn qua cột dài, giúp việc kéo thả dễ dàng hơn (xem demo ở video 32).
+    // Lưu ý, khi sử dụng kết hợp với (...listeners) nằm ở Box,
+    // hãy đảm bảo nó nằm trong Box thích hợp thay vì div ngoài cùng để tránh kéo vào vùng không mong muốn.
+    height: '100%',
+    opacity: isDragging? 0.5 : undefined
   }
 
   const [anchorEl, setAnchorEl] = useState(null)
@@ -47,11 +51,8 @@ function Column({ column }) {
   const orderedCards = mapOrder(column?.cards, column?.cardOrderIds, '_id')
 
   return (
-    <div>
+    <div ref={setNodeRef} style ={dndKitColumnStyle} {...attributes}>
       <Box
-        ref={setNodeRef}
-        style ={dndKitColumnStyle}
-        {...attributes}
         {...listeners}
         sx={{
           minWidth: '300px',
