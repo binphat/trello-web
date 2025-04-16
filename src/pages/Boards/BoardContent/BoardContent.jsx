@@ -263,7 +263,7 @@ function BoardContent({ board }) {
   const collisionDetectionStrategy = useCallback((args) => {
     // Trường hợp kéo column thì dùng thuật toán closestConers là chuẩn nhất
     if (activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.COLUMN) {
-      return rectIntersection ({ ...args })
+      return rectIntersection({ ...args })
 
     }
     // Tìm các điểm giao nhau, va chạm, trả về một mảng các va chạm - intersection với con trỏ
@@ -325,7 +325,7 @@ function BoardContent({ board }) {
       }}>
         <ListColumns columns={orderedColumns} />
         <DragOverlay dropAnimation={customDropAnimation}>
-          {(!activeDragItemType ) && null}
+          {!activeDragItemType && null}
           {(activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.COLUMN) && <Column column={activeDragItemData}/>}
           {(activeDragItemType === ACTIVE_DRAG_ITEM_TYPE.CARD) && <Card card={activeDragItemData}/>}
         </DragOverlay>
