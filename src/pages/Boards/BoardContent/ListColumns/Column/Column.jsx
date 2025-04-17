@@ -232,7 +232,7 @@ function Column({ column }) {
             <CloseIcon
               fontSize='small'
               sx={{ color: (theme) => theme.palette.warning.light,
-                cursor: 'pointer',
+                cursor: 'pointer'
               }}
               onClick={toggleOpenNewCardForm}
             />
