@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toast } from 'react-toastify'
 import Typography from '@mui/material/Typography'
 import Box from '@mui/material/Box'
 import Menu from '@mui/material/Menu'
@@ -49,10 +50,14 @@ function Column({ column }) {
   const [newCardTitle, setNewCardTitle] = useState('')
 
   const addNewCard = () => {
-    if (!newCardTitle.trim()) return
+    if (!newCardTitle) {
+      toast.error('Please enter Card Title', {position: 'bottom-right' } )
+      return
+    }
+
     // TODO: Add new card API logic here
+    toggleOpenNewCardForm
     setNewCardTitle('')
-    setOpenNewCardForm(false)
   }
 
   return (
