@@ -19,7 +19,6 @@ import AddCardIcon from '@mui/icons-material/AddCard'
 import Button from '@mui/material/Button'
 import DragHandleIcon from '@mui/icons-material/DragHandle'
 import ListCards from './ListCards/ListCards'
-import { mapOrder } from '~/utils/sorts'
 import { useSortable } from '@dnd-kit/sortable'
 import TextField from '@mui/material/TextField'
 import { CSS } from '@dnd-kit/utilities'
@@ -42,14 +41,14 @@ function Column({ column, createNewCard }) {
   const open = Boolean(anchorEl)
   const handleClick = (event) => setAnchorEl(event.currentTarget)
   const handleClose = () => setAnchorEl(null)
-
-  const orderedCards = mapOrder(column?.cards, column?.cardOrderIds, '_id')
+  // Card đã được sắp xếp ở component cha
+  const orderedCards = column.cards
 
   const [openNewCardForm, setOpenNewCardForm] = useState(false)
   const toggleOpenNewCardForm = () => setOpenNewCardForm(!openNewCardForm)
   const [newCardTitle, setNewCardTitle] = useState('')
 
-  const addNewCard = async () => {
+  const addNewCard = () => {
     if (!newCardTitle) {
       toast.error('Please enter Card Title', { position: 'bottom-right' } )
       return
@@ -67,7 +66,7 @@ function Column({ column, createNewCard }) {
      * component cha phía bên trên. (Đối với component con nằm càng sâu thì càng khổ :)
      * - Với việc sử dụng Redux như vậy thì code sẽ Clean chuẩn chỉnh hơn rất nhiều.
      */
-    await createNewCard(newCardData)
+    createNewCard(newCardData)
 
     // TODO: Add new card API logic here
     toggleOpenNewCardForm
