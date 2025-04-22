@@ -22,3 +22,10 @@ export const createNewCardAPI = async (newCardData) => {
   // Lưu ý: Axios sẽ trả về kết quả về qua property của nó là data
   return response.data
 }
+// Board,
+// put là cập nhật dữ liệu
+export const updateBoardDetailsAPI = async (boardId, updateData) => {
+  const response = await axios.put(`${API_ROOT}/v1/boards/${boardId}`, updateData)
+  // put là cập nhật dữ liệu)
+  return response.data
+}
