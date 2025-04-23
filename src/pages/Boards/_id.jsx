@@ -78,10 +78,18 @@ function Board() {
     const newBoard = { ...board }
     const columnToUpdate = newBoard.columns.find(column => column._id === createdCard.columnId)
     if (columnToUpdate) {
-      columnToUpdate.cards.push(createdCard)
-      columnToUpdate.cardOrderIds.push(createdCard._id)
-      setBoard(newBoard)
+      if (columnToUpdate.cards.some(card => card.FE_PlaceholderCard)) {
+        columnToUpdate.cards = [createdCard]
+        columnToUpdate.cardOrderIds = [createdCard._id]
+      } else {
+      // Nếu column rỗng: thì bản chất là đang chứa một cái Placeholder card
+        columnToUpdate.cards.push(createdCard)
+        columnToUpdate.cardOrderIds.push(createdCard._id)
+      }
+
     }
+    console.log('🚀 ~ createNewCard ~ columnToUpdate:', columnToUpdate)
+    setBoard(newBoard)
   }
   // Function này có nhiệm vụ gọi API tạo mới card và xử lý khi kéo thả column xong xuôi
   const moveColumns = (dndOrderedColumns) => {
@@ -127,17 +135,21 @@ function Board() {
     setBoard(newBoard)
 
     // Gọi API xử lý phía Backend
+    let prevCardOrderIds = dndOrderedColumns.find(c => c._id === prevColumnId)?.cardOrderIds
+    // Xử lý vấn đề khi kéo card cuối cùng ra khỏi column, column rỗng sẽ có paceholder card, cần xóa đi trước khi gửi dữ liệu lên BE
+    if (prevCardOrderIds[0].includes('placeholder-card')) prevCardOrderIds = []
+
     moveCardToDifferentColumnAPI({
       currentCardId,
       prevColumnId,
-      prevCardOrderIds: dndOrderedColumns.find(c => c._id === prevColumnId)?.cardOrderIds,
+      prevCardOrderIds,
       nextColumnId,
       nextCardOrderIds: dndOrderedColumns.find(c => c._id === nextColumnId)?.cardOrderIds
     })
 
   }
 
-  if (!board) { 
+  if (!board) {
     return (
       <Box sx={{
         display: 'flex',

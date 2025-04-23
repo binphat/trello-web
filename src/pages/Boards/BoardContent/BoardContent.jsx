@@ -373,6 +373,7 @@ function BoardContent({
         borderBottom: '1px solid white',
         width: '100%',
         height: (theme) => theme.trello.boardContentHeight,
+        flex: 1,
         p : '10px 0'
       }}>
         <ListColumns
