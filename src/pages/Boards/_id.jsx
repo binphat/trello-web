@@ -3,7 +3,6 @@ import Container from '@mui/material/Container'
 import AppBar from '~/components/AppBar/AppBar'
 import BoardBar from './BoardBar/BoardBar'
 import BoardContent from './BoardContent/BoardContent'
-// import { mockData } from '~/apis/mock-data'
 import {
   updateBoardDetailsAPI,
   updateColumnDetailsAPI,
@@ -20,6 +19,7 @@ import {
   from '~/redux/activeBoard/activeBoardSlice'
 import { useDispatch, useSelector } from 'react-redux'
 import { cloneDeep } from 'lodash'
+import { useParams } from 'react-router-dom'
 
 //--------------------------------------------------------------//
 //--------------------------------------------------------------//
@@ -32,12 +32,13 @@ function Board() {
   // const [board, setBoard] = useState(null)
   const board = useSelector(selectCurrentActiveBoard)
 
+  const { boardId } = useParams()
+  console.log('🚀 ~ Board ~ boardId:', boardId)
+
   useEffect(() => {
-    const boardId = '6800a4e43d2e90f5dd5bd70c'
     // Call API
     dispatch(fetchBoardDetailsAPI(boardId))
-  }, [dispatch])
-
+  }, [dispatch, boardId])
   // Function này có nhiệm vụ gọi API tạo mới card và xử lý khi kéo thả column xong xuôi
   const moveColumns = (dndOrderedColumns) => {
     // Cập nhật lại cho chuẩn dữ liệu state Board
