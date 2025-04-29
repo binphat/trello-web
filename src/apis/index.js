@@ -1,7 +1,5 @@
-import axios from 'axios'
+import authorizedAxiosInstance from '~/utils/authorizeAxios'
 import { API_ROOT } from '~/utils/constants'
-
-
 // Board
 // Đã move vào redux
 // export const fetchBoardDetailsAPI = async (boardId) => {
@@ -12,32 +10,32 @@ import { API_ROOT } from '~/utils/constants'
 // Board,
 // put là cập nhật dữ liệu
 export const updateBoardDetailsAPI = async (boardId, updateData) => {
-  const response = await axios.put(`${API_ROOT}/v1/boards/${boardId}`, updateData)
+  const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/boards/${boardId}`, updateData)
   // put là cập nhật dữ liệu)
   return response.data
 }
 
 export const moveCardToDifferentColumnAPI = async (updateData) => {
-  const response = await axios.put(`${API_ROOT}/v1/boards/supports/moving_card`, updateData)
+  const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/boards/supports/moving_card`, updateData)
   return response.data
 }
 
 // Column
 export const createNewColumnAPI = async (newColumnData) => {
-  const response = await axios.post(`${API_ROOT}/v1/columns`, newColumnData)
+  const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/columns`, newColumnData)
   // Lưu ý: Axios sẽ trả về kết quả về qua property của nó là data
   return response.data
 }
 // Update Column
 // put là cập nhật dữ liệu
 export const updateColumnDetailsAPI = async (columnId, updateData) => {
-  const response = await axios.put(`${API_ROOT}/v1/columns/${columnId}`, updateData)
+  const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/columns/${columnId}`, updateData)
   // put là cập nhật dữ liệu)
   return response.data
 }
 // Delete Column
 export const deleteColumnDetailsAPI = async (columnId) => {
-  const response = await axios.delete(`${API_ROOT}/v1/columns/${columnId}`)
+  const response = await authorizedAxiosInstance.delete(`${API_ROOT}/v1/columns/${columnId}`)
   // put là cập nhật dữ liệu)
   return response.data
 }
@@ -45,7 +43,7 @@ export const deleteColumnDetailsAPI = async (columnId) => {
 
 // Card
 export const createNewCardAPI = async (newCardData) => {
-  const response = await axios.post(`${API_ROOT}/v1/cards`, newCardData)
+  const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/cards`, newCardData)
   // Lưu ý: Axios sẽ trả về kết quả về qua property của nó là data
   return response.data
 }
