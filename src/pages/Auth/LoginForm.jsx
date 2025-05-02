@@ -20,15 +20,28 @@ import {
   EMAIL_RULE_MESSAGE
 } from '~/utils/validators'
 import FieldErrorAlert from '~/components/Form/FieldErrorAlert'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
+import { loginUserAPI } from '~/redux/User/userSlice'
+import { toast } from 'react-toastify'
 
 function LoginForm() {
+  const dispatch = useDispatch()
+  const navigate = useNavigate()
   const { register, handleSubmit, formState: { errors } } = useForm()
   let [searchParams] = useSearchParams()
   const registeredEmail = searchParams.get('registeredEmail')
   const verifiedEmail = searchParams.get('verifiedEmail')
-  const submitLogIn = (data) => { 
-    console.log('🚀 ~ submitLogIn ~ data:', data)
+  const submitLogIn = (data) => {
+    const { email, password } = data
+    toast.promise(
+      dispatch(loginUserAPI({ email, password })),
+      { pending: 'Đang đăng nhập' }
+    ).then(res => {
+      console.log(res)
+      // Đoạn này kiểm tra không có lỗi (Login thành công) thì mới điều hướng về route "/"
+      if (!res.error) navigate('/')
+    })
   }
   return (
     <form onSubmit={handleSubmit(submitLogIn)}>
