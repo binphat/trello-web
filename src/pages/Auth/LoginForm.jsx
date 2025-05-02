@@ -10,7 +10,7 @@ import { ReactComponent as IconLogo } from '~/assets/icon-logo.svg'
 import CardActions from '@mui/material/CardActions'
 import TextField from '@mui/material/TextField'
 import Zoom from '@mui/material/Zoom'
-// import Alert from '@mui/material/Alert'
+import Alert from '@mui/material/Alert'
 import { useForm } from 'react-hook-form'
 import {
   EMAIL_RULE,
@@ -20,11 +20,15 @@ import {
   EMAIL_RULE_MESSAGE
 } from '~/utils/validators'
 import FieldErrorAlert from '~/components/Form/FieldErrorAlert'
+import { useSearchParams } from 'react-router-dom'
 
 function LoginForm() {
   const { register, handleSubmit, formState: { errors } } = useForm()
-  const submitLogIn = (data) => {
-    console.log('submitLogIn:', data)
+  let [searchParams] = useSearchParams()
+  const registeredEmail = searchParams.get('registeredEmail')
+  const verifiedEmail = searchParams.get('verifiedEmail')
+  const submitLogIn = (data) => { 
+    console.log('🚀 ~ submitLogIn ~ data:', data)
   }
   return (
     <form onSubmit={handleSubmit(submitLogIn)}>
@@ -43,16 +47,20 @@ function LoginForm() {
             Tác giả: Nguyễn Tấn Phát
           </Box>
           <Box sx={{ marginTop: '1em', display: 'flex', justifyContent: 'center', flexDirection: 'column', padding: '0 1em' }}>
-            {/* <Alert severity="success" sx={{ '.MuiAlert-message': { overflow: 'hidden' } }}>
-              Email của bạn&nbsp;
-              <Typography variant="span" sx={{ fontWeight: 'bold', '&:hover': { color: '#fdba26' } }}>nguyenphat2203@gmail.com</Typography>
-              &nbsp;đã được xác minh.<br />Bây giờ bạn có thể đăng nhập để tận hưởng các dịch vụ của chúng tôi! Chúc một ngày tốt lành!
+            {verifiedEmail &&
+            <Alert severity="success" sx={{ '.MuiAlert-message': { overflow: 'hidden' } }}>
+            Email của bạn&nbsp;
+              <Typography variant="span" sx={{ fontWeight: 'bold', '&:hover': { color: '#fdba26' } }}>{verifiedEmail}</Typography>
+            &nbsp;đã được xác minh.<br />Bây giờ bạn có thể đăng nhập để tận hưởng các dịch vụ của chúng tôi! Chúc một ngày tốt lành!
             </Alert>
-            <Alert severity="info" sx={{ '.MuiAlert-message': { overflow: 'hidden' } }}>
+            }
+            {registeredEmail && 
+              <Alert severity="info" sx={{ '.MuiAlert-message': { overflow: 'hidden' } }}>
               Một email đã được gửi đến&nbsp;
-              <Typography variant="span" sx={{ fontWeight: 'bold', '&:hover': { color: '#fdba26' } }}>nguyenphat2203@gmail.com</Typography>
-              <br />Vui lòng kiểm tra và xác minh tài khoản của bạn trước khi đăng nhập!
-            </Alert> */}
+                <Typography variant="span" sx={{ fontWeight: 'bold', '&:hover': { color: '#fdba26' } }}>{registeredEmail}</Typography>
+                <br />Vui lòng kiểm tra và xác minh tài khoản của bạn trước khi đăng nhập!
+              </Alert>
+            }
           </Box>
           <Box sx={{ padding: '0 1em 1em 1em' }}>
             <Box sx={{ marginTop: '1em' }}>

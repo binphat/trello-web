@@ -1,75 +1,85 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+// TrungQuanDev: https://youtube.com/@trungquandev
+import Box from '@mui/material/Box'
+import Typography from '@mui/material/Typography'
+import Button from '@mui/material/Button'
+import HomeIcon from '@mui/icons-material/Home'
+import SvgIcon from '@mui/material/SvgIcon'
 import { ReactComponent as PlanetSvg } from '~/assets/404/planet.svg'
 import { ReactComponent as AstronautSvg } from '~/assets/404/astronaut.svg'
+import { Link } from 'react-router-dom'
 
-export default function NotFound() {
+function NotFound() {
   return (
-    <div style={{
-      backgroundColor: '#202942',
-      backgroundImage: 'radial-gradient(rgba(255,255,255,0.1) 1px, transparent 1px)',
-      backgroundSize: '40px 40px',
+    <Box sx={{
+      width: '100vw',
       height: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: '\'Poppins\', sans-serif',
-      textAlign: 'center',
-      color: '#fff',
-      padding: '0 20px',
-      overflow: 'hidden'
+      bgcolor: '#25344C',
+      color: 'white'
     }}>
-      <h1 style={{ fontSize: '8rem', margin: 0 }}>404</h1>
-      <p style={{ fontSize: '1.5rem', marginBottom: '2rem' }}>
-        LOST IN <span style={{ textDecoration: 'line-through' }}>SPACE</span> <span style={{ color: '#e67e22', fontWeight:'700' }}>Team-Up</span>? Hmm, looks like that page no exist.
-      </p>
-      <div style={{ position: 'relative', width: '500px', height: '400px' }}>
-        {/* Planet đứng im, to hơn */}
-        <PlanetSvg style={{
-          width: '300px',
-          height: '300px',
-          margin: '0 auto'
-        }} />
-        {/* Astronaut nhỏ và xa hơn */}
-        <AstronautSvg style={{
-          width: '40px',
-          position: 'absolute',
-          top: '10%',
-          left: '90%',
-          transform: 'translate(-50%, -50%)',
-          animation: 'astronaut-float 12s linear infinite'
-        }} />
-      </div>
-
-      {/* Go Home dùng Link */}
-      <Link
-        to="/"
-        style={{
-          marginTop: '8px',
-          padding: '12px 24px',
-          backgroundColor: 'transparent',
-          border: '1px solid #fff',
-          borderRadius: '8px',
-          color: '#fff',
-          fontSize: '1rem',
-          fontWeight: '600',
-          textDecoration: 'none',
-          transition: 'background-color 0.3s'
-        }}
-        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#cf711f'}
-        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-      >
-        Go Home
-      </Link>
-
-      <style>{`
-        @keyframes astronaut-float {
-          0% { transform: translate(-50%, -50%) rotate(0deg) translateY(0); }
-          50% { transform: translate(-50%, -50%) rotate(180deg) translateY(-30px); }
-          100% { transform: translate(-50%, -50%) rotate(360deg) translateY(0); }
-        }
-      `}</style>
-    </div>
+      <Box sx={{
+        '@keyframes stars': {
+          '0%': { backgroundPosition: '-100% 100%' },
+          '100%': { backgroundPosition: '0 0 ' }
+        },
+        animation: 'stars 12s linear infinite alternate',
+        width: '100%',
+        height: '100%',
+        backgroundImage: 'url("src/assets/404/particles.png")',
+        backgroundSize: 'contain',
+        backgroundRepeat: 'repeat',
+        backgroundPosition: 'center',
+        // boxShadow: 'inset 0 0 0 2000px rgba(0, 0, 0, 0.2)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <Typography variant="h1" sx={{ fontSize: '100px', fontWeight: 800 }}>404</Typography>
+        <Typography sx={{ fontSize: '18px !important', lineHeight: '25px', fontWeight: 400, maxWidth: '350px', textAlign: 'center' }}>
+          LOST IN&nbsp;
+          <Typography variant="span" sx={{
+            position: 'relative',
+            '&:after': {
+              position: 'absolute',
+              content: '""',
+              borderBottom: '3px solid #fdba26',
+              left: 0,
+              top: '43%',
+              width: '100%'
+            }
+          }}>
+            &nbsp;SPACE&nbsp;
+          </Typography>
+          &nbsp;<Typography variant="span" sx={{ color: '#fdba26', fontWeight: 500 }}>TeamUp</Typography>?<br />Hmm, looks like that page doesn&apos;t exist.
+        </Typography>
+        <Box sx={{ width: '390px', height: '390px', position: 'relative' }}>
+          <SvgIcon component={AstronautSvg} inheritViewBox sx={{
+            width: '50px', height: '50px', position: 'absolute', top: '20px', right: '25px',
+            '@keyframes spinAround': {
+              from: { transform: 'rotate(0deg)' },
+              to: { transform: 'rotate(360deg)' }
+            },
+            animation: 'spinAround 5s linear 0s infinite'
+          }} />
+          {/* Đoạn này nếu chỉ cần hiện file SVG mà không cần custom css bằng SX prop thì không cần dùng SvgIcon mà cứ gọi trực tiếp luôn cũng được */}
+          <PlanetSvg />
+        </Box>
+        <Link to="/" style={{ textDecoration: 'none' }}>
+          <Button
+            variant="outlined"
+            startIcon={<HomeIcon />}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              color: 'white',
+              borderColor: 'white',
+              '&:hover': { color: '#fdba26', borderColor: '#fdba26' }
+            }}
+          >Go Home</Button>
+        </Link>
+      </Box>
+    </Box>
   )
 }
+
+export default NotFound

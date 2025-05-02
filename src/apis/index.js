@@ -1,5 +1,6 @@
 import authorizedAxiosInstance from '~/utils/authorizeAxios'
 import { API_ROOT } from '~/utils/constants'
+import { toast } from 'react-toastify'
 // Board
 // Đã move vào redux
 // export const fetchBoardDetailsAPI = async (boardId) => {
@@ -47,4 +48,15 @@ export const createNewCardAPI = async (newCardData) => {
   // Lưu ý: Axios sẽ trả về kết quả về qua property của nó là data
   return response.data
 }
+/** Users */
+export const registerUserAPI = async (data) => {
+  const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/users/register`, data)
+  toast.success('Tài khoản được tạo thành công! Vui lòng kiểm tra và xác minh tài khoản của bạn trước khi đăng nhập!', { theme: 'colored' })
+  return response.data
+}
 
+export const verifyUserAPI = async (data) => {
+  const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/users/verify`, data)
+  toast.success('Tài khoản đã xác minh thành công! Bây giờ bạn có thể đăng nhập để tận hưởng các dịch vụ của chúng tôi! Chúc một ngày tốt lành!', { theme: 'colored' })
+  return response.data
+}
