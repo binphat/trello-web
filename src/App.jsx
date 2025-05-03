@@ -23,7 +23,6 @@ import { selectCurrentUser } from '~/redux/User/userSlice'
  * private-routes/
  */
 const ProtectedRoute = ({ user }) => {
-  console.log('🚀 ~ ProtectedRoute ~ user:', user)
   if (!user) return <Navigate to='/login' replace={true}/>
   return <Outlet />
 }
