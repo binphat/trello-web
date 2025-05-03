@@ -60,3 +60,7 @@ export const verifyUserAPI = async (data) => {
   toast.success('Tài khoản đã xác minh thành công! Bây giờ bạn có thể đăng nhập để tận hưởng các dịch vụ của chúng tôi! Chúc một ngày tốt lành!', { theme: 'colored' })
   return response.data
 }
+export const refreshTokenAPI = async () => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/users/refresh_token`)
+  return response.data
+}
