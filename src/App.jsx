@@ -7,7 +7,8 @@ import Auth from '~/pages/Auth/Auth.jsx'
 import AccountVerification from './pages/Auth/AccountVerification'
 import { useSelector } from 'react-redux'
 import { selectCurrentUser } from '~/redux/User/userSlice'
-
+import Settings from '~/pages/Settings/Settings'
+import Boards from './pages/Boards'
 /**
  * Giải pháp Clean Code trong việc xác định các
  * route nào cần đăng nhập tài khoản xong thì mới
@@ -34,7 +35,7 @@ function App() {
         // Ở đây cần replace giá trị true để nó thay thế route /, có thể hiểu là route / sẽ không còn nằm trong history của Browser.
         // Thực hành để hiểu hơn bằng cách nhấn Go Home từ trang 404 xong thử quay lại
         // bằng nút back của trình duyệt giữa 2 trường hợp có replace hoặc không có.
-        <Navigate to="/boards/6800a4e43d2e90f5dd5bd70c" replace={true} />
+        <Navigate to="/boards" replace={true} />
       } />
       {/* Protected Routes (Hiểu đơn giản trong dự án
         của chúng ta là những route chỉ cho truy cập sau
@@ -45,7 +46,12 @@ function App() {
         {/* <Outlet /> của react-router-dom sẽ chạy vào child route trong này */}
         {/* Board Details */}
         <Route path='/boards/:boardId' element={<Board />} />
-
+        {/* Board List */}
+        <Route path='/boards/' element={<Boards />} />
+        {/* User Setting */}
+        <Route path='settings/account' element={<Settings />} />
+        <Route path='settings/security' element={<Settings />} />
+        <Route path='settings/rating' element={<Settings />} />
       </Route>
       {/* Authetication*/}
       <Route path='/login' element={<Auth />}/>
