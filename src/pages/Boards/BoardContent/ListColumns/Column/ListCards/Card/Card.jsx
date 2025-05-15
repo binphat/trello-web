@@ -9,8 +9,11 @@ import Typography from '@mui/material/Typography'
 import AttachmentIcon from '@mui/icons-material/Attachment'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { useDispatch } from 'react-redux'
+import { updateCurrentActiveCard, showModalActiveCard } from '~/redux/activeCard/activeCardSlice'
 
 function Card( { card } ) {
+  const dispatch = useDispatch()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: card._id,
     data: { ...card }
@@ -27,10 +30,18 @@ function Card( { card } ) {
   const shouldShowCardActions = () => {
     return !!card?.memberIds?.length || !!card?.comments?.length || !!card?.attachments?.length
   }
+  const setActiveCard = () => {
+    // Cập nhật data cho activeCard trong redux
+    dispatch(updateCurrentActiveCard(card))
+    // Hiện Modal ActiveCard lên
+    dispatch(showModalActiveCard())
+  }
+
 
   return (
     <div>
       <MuiCard
+        onClick={setActiveCard}
         ref={setNodeRef} style ={dndKitCardStyle} {...attributes} {...listeners}
         sx={{
           cursor: 'pointer',
