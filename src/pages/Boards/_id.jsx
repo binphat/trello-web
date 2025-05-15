@@ -18,6 +18,8 @@ import { useDispatch, useSelector } from 'react-redux'
 import { cloneDeep } from 'lodash'
 import { useParams } from 'react-router-dom'
 import PageLoadingSpinner from '~/components/Loading/PageLoadingSpinner'
+import ActiveCard from '~/components/Modal/ActiveCard/ActiveCard'
+
 //--------------------------------------------------------------//
 //--------------------------------------------------------------//
 //--------------------------------------------------------------//
@@ -114,13 +116,15 @@ function Board() {
   }
   return (
     <Container disableGutters maxWidth={false} sx={{ height: '100vh' }}>
+      {/* 💡 Modal Active Card, check đóng/mở dựa theo cái State isShowModalActiveCard lưu trong Redux */}
+      <ActiveCard />
+
+      {/* Các thành phần còn lại của Board Details */}
       <AppBar />
       <BoardBar board={board}/>
       <BoardContent
         board={board}
-
         // deleteColumnDetails={deleteColumnDetails}
-
         moveColumns={moveColumns}
         moveCardInTheSameColumn={moveCardInTheSameColumn}
         moveCardToDifferentColumn={moveCardToDifferentColumn}
