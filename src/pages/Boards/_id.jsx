@@ -21,9 +21,6 @@ import PageLoadingSpinner from '~/components/Loading/PageLoadingSpinner'
 import ActiveCard from '~/components/Modal/ActiveCard/ActiveCard'
 
 //--------------------------------------------------------------//
-//--------------------------------------------------------------//
-//--------------------------------------------------------------//
-//--------------------------------------------------------------//
 
 function Board() {
   const dispatch = useDispatch()

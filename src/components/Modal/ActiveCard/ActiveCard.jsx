@@ -39,8 +39,10 @@ import CardDescriptionMdEditor from './CardDescriptionMdEditor'
 import CardActivitySection from './CardActivitySection'
 import { updateCardDetailsAPI } from '~/apis'
 import { updateCardInBoard } from '~/redux/activeBoard/activeBoardSlice'
+import { selectCurrentUser } from '~/redux/User/userSlice'
 import { styled } from '@mui/material/styles'
-import { comment } from '@uiw/react-md-editor'
+import { CARD_MEMBER_ACTIONS } from '~/utils/constants'
+
 const SidebarItem = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
@@ -68,6 +70,7 @@ function ActiveCard() {
   const dispatch = useDispatch()
   const activeCard = useSelector(selectCurrentActiveCard)
   const isShowModalActiveCard = useSelector(selectIsShowModalActiveCard)
+  const currentUser = useSelector(selectCurrentUser)
   // Không dùng biến state để check đóng mở modal nữa vì chúng ta sẽ check bên board/_id.jsx
   // const [isOpen, setIsOpen] = useState(true)
   // const handleOpenModal = () => setIsOpen(true)
@@ -118,6 +121,9 @@ function ActiveCard() {
     callApiUpdateCard({ description: newDescription })
   }
 
+  const onUpdateCardMember = (incomingMemberInfo) => {
+    callApiUpdateCard({ incomingMemberInfo })
+  }
   return (
     <Modal
       disableScrollLock
@@ -173,7 +179,10 @@ function ActiveCard() {
               <Typography sx={{ fontWeight: '600', color: 'primary.main', mb: 1 }}>Members</Typography>
 
               {/* Feature 02: Xử lý các thành viên của Card */}
-              <CardUserGroup />
+              <CardUserGroup
+                cardMemberIds={activeCard?.memberIds}
+                onUpdateCardMember={onUpdateCardMember}
+              />
             </Box>
 
             <Box sx={{ mb: 3 }}>
@@ -208,10 +217,21 @@ function ActiveCard() {
             <Typography sx={{ fontWeight: '600', color: 'primary.main', mb: 1 }}>Add To Card</Typography>
             <Stack direction="column" spacing={1}>
               {/* Feature 05: Xử lý hành động bản thân user tự join vào card */}
-              <SidebarItem className="active">
+              {/* Feature: chỉ hiển thị hành động Join card */}
+              {/* Nếu user hiện tại đang đăng nhập chưa thuộc mảng memberIds của card thì mới cho hiện nút Join ra */}
+              {/* Khi Click vào Join thì nó sẽ luôn là hành động ADD */}
+              {!activeCard?.memberIds?.includes(currentUser._id) &&
+              <SidebarItem
+                className="active"
+                onClick={() => onUpdateCardMember({
+                  userId: currentUser._id,
+                  action: CARD_MEMBER_ACTIONS.ADD
+                })}
+              >
                 <PersonOutlineOutlinedIcon fontSize="small" />
-                Join
+                Tham gia
               </SidebarItem>
+              }
               {/* Feature 06: Xử lý hành động cập nhật ảnh Cover của Card */}
               <SidebarItem className="active" component="label">
                 <ImageOutlinedIcon fontSize="small" />
