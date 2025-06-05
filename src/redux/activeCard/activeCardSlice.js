@@ -1,5 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit'
-
+import { callApiUpdateCard } from '~/redux/activeBoard/activeBoardSlice'
 // Khởi tạo giá trị của một Slice trong redux
 const initialState = {
   currentActiveCard: null,
@@ -31,7 +31,13 @@ export const activeCardSlice = createSlice({
       state.currentActiveCard = fullCard
     }
   },
-  extraReducers: (builder) => {}
+  extraReducers: (builder) => {
+    builder.addCase(callApiUpdateCard.fulfilled, (state, action)=> {
+      // Cập nhật luôn activeCard khi API update thành công
+      state.currentActiveCard = action.payload
+    }
+    )
+  }
 })
 
 // Action creators are generated for each case reducer function

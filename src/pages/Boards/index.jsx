@@ -100,15 +100,7 @@ function Boards() {
             <Stack direction="column" spacing={1}>
               <SidebarItem className="active">
                 <SpaceDashboardIcon fontSize="small" />
-                Boards
-              </SidebarItem>
-              <SidebarItem>
-                <ListAltIcon fontSize="small" />
-                Templates
-              </SidebarItem>
-              <SidebarItem>
-                <HomeIcon fontSize="small" />
-                Home
+                Bảng
               </SidebarItem>
             </Stack>
             <Divider sx={{ my: 1 }} />
@@ -118,11 +110,11 @@ function Boards() {
           </Grid>
 
           <Grid xs={12} sm={9}>
-            <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 3 }}>Your boards:</Typography>
+            <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 3 }}>Bảng của bạn:</Typography>
 
             {/* Trường hợp gọi API nhưng không tồn tại cái board nào trong Database trả về */}
             {boards?.length === 0 &&
-              <Typography variant="span" sx={{ fontWeight: 'bold', mb: 3 }}>No result found!</Typography>
+              <Typography variant="span" sx={{ fontWeight: 'bold', mb: 3 }}>Không có bảng nào được tìm thấy</Typography>
             }
 
             {/* Trường hợp gọi API và có boards trong Database trả về thì render danh sách boards */}
@@ -156,7 +148,7 @@ function Boards() {
                             color: 'primary.main',
                             '&:hover': { color: 'primary.light' }
                           }}>
-                          Go to board <ArrowRightIcon fontSize="small" />
+                          Vào bảng <ArrowRightIcon fontSize="small" />
                         </Box>
                       </CardContent>
                     </Card>

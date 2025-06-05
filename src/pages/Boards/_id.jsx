@@ -11,9 +11,11 @@ import {
 import {
   fetchBoardDetailsAPI,
   updateCurrentActiveBoard,
-  selectCurrentActiveBoard
-}
-  from '~/redux/activeBoard/activeBoardSlice'
+  selectCurrentActiveBoard,
+  updateCardFilter,
+  applyCardFilter,
+  clearCardFilter
+} from '~/redux/activeBoard/activeBoardSlice'
 import { useDispatch, useSelector } from 'react-redux'
 import { cloneDeep } from 'lodash'
 import { useParams } from 'react-router-dom'
@@ -29,10 +31,31 @@ function Board() {
   const board = useSelector(selectCurrentActiveBoard)
 
   const { boardId } = useParams()
+  
   useEffect(() => {
     // Call API
     dispatch(fetchBoardDetailsAPI(boardId))
+    
+    // Clear filter khi chuyển board
+    return () => {
+      dispatch(clearCardFilter())
+    }
   }, [dispatch, boardId])
+
+  // Xử lý thay đổi card filter
+  const handleCardFilterChange = (filterConfig) => {
+    // Cập nhật filter state
+    dispatch(updateCardFilter(filterConfig))
+    
+    // Áp dụng filter nếu showMyCardsOnly = true
+    if (filterConfig.showMyCardsOnly) {
+      dispatch(applyCardFilter())
+    } else {
+      // Clear filter nếu showMyCardsOnly = false
+      dispatch(clearCardFilter())
+    }
+  }
+
   // Function này có nhiệm vụ gọi API tạo mới card và xử lý khi kéo thả column xong xuôi
   const moveColumns = (dndOrderedColumns) => {
     // Cập nhật lại cho chuẩn dữ liệu state Board
@@ -48,10 +71,10 @@ function Board() {
     // setBoard(newBoard)
     dispatch(updateCurrentActiveBoard(newBoard))
 
-
     // Gọi API update Board
     updateBoardDetailsAPI(newBoard._id, { columnOrderIds: newBoard.columnOrderIds })
   }
+
   /**
    * Khi di chuyển card trong cùng Column:
    * Chỉ cần gọi API để cập nhật mảng cardOrderIds của Column chứa nó (không cần thay đổi vị trí của nó trong mảng)
@@ -76,6 +99,7 @@ function Board() {
     // Gọi API update Column
     updateColumnDetailsAPI(columnId, { cardOrderIds: dndOrderedCardIds })
   }
+
   /**
     * Khi di chuyển card sang Column khác:
     * B1: Cập nhật mảng cardOrderIds của Column ban đầu chứa nó (Hiểu bản chất là xóa cái _id của Card ra khỏi mảng)
@@ -93,7 +117,6 @@ function Board() {
     // setBoard(newBoard)
     dispatch(updateCurrentActiveBoard(newBoard))
 
-
     // Gọi API xử lý phía Backend
     let prevCardOrderIds = dndOrderedColumns.find(c => c._id === prevColumnId)?.cardOrderIds
     // Xử lý vấn đề khi kéo card cuối cùng ra khỏi column, column rỗng sẽ có paceholder card, cần xóa đi trước khi gửi dữ liệu lên BE
@@ -106,11 +129,12 @@ function Board() {
       nextColumnId,
       nextCardOrderIds: dndOrderedColumns.find(c => c._id === nextColumnId)?.cardOrderIds
     })
-
   }
+
   if (!board) {
     return <PageLoadingSpinner caption='Loading Board....'/>
   }
+
   return (
     <Container disableGutters maxWidth={false} sx={{ height: '100vh' }}>
       {/* 💡 Modal Active Card, check đóng/mở dựa theo cái State isShowModalActiveCard lưu trong Redux */}
@@ -118,7 +142,10 @@ function Board() {
 
       {/* Các thành phần còn lại của Board Details */}
       <AppBar />
-      <BoardBar board={board}/>
+      <BoardBar 
+        board={board} 
+        onCardFilterChange={handleCardFilterChange}
+      />
       <BoardContent
         board={board}
         // deleteColumnDetails={deleteColumnDetails}
@@ -129,4 +156,5 @@ function Board() {
     </Container>
   )
 }
+
 export default Board

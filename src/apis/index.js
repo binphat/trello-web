@@ -82,3 +82,228 @@ export const inviteUserToBoardAPI = async (data) => {
   toast.success('Đã mời thành công vào bảng thành công!')
   return response.data
 }
+// Chatbot API
+export const sendChatbotMessageAPI = async ({ message, conversationHistory }) => {
+  try {
+    const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/ai/chatbot`, {
+      message,
+      conversationHistory
+    })
+    return response.data
+  } catch (error) {
+    // Có thể thêm toast thông báo lỗi nếu cần
+    toast.error('Gửi tin nhắn thất bại. Vui lòng thử lại sau!', { theme: 'colored' })
+    throw error // Re-throw để xử lý tiếp trong Redux
+  }
+}
+
+export const getChatbotHistoryAPI = async () => {
+  try {
+    const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/chatbot/history`)
+    return response.data
+  } catch (error) {
+    console.error('Lỗi khi lấy lịch sử chat:', error)
+    throw error
+  }
+}
+
+export const clearChatbotHistoryAPI = async () => {
+  try {
+    const response = await authorizedAxiosInstance.delete(`${API_ROOT}/v1/chatbot/history`)
+    return response.data
+  } catch (error) {
+    toast.error('Xóa lịch sử chat thất bại', { theme: 'colored' })
+    throw error
+  }
+}
+// Evaluation Criteria
+export const createEvaluationCriteriaAPI = async ({ boardId, criteriaList }) => {
+  try {
+    const response = await authorizedAxiosInstance.post(
+      `${API_ROOT}/v1/evaluation`,
+      { boardId, criteriaList }
+    )
+    toast.success('Tạo tiêu chí đánh giá thành công!', { theme: 'colored' })
+    return response.data
+  } catch (error) {
+    toast.error('Tạo tiêu chí đánh giá thất bại!', { theme: 'colored' })
+    throw error
+  }
+}
+
+// Lấy danh sách tiêu chí đánh giá theo boardId
+export const getEvaluationCriteriaAPI = async (boardId) => {
+  const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/single/criteria?boardId=${boardId}`)
+  return response.data
+}
+
+// ==================== EVALUATION SUBMISSION APIs ====================
+
+// Lấy danh sách tất cả đánh giá của một board
+export const getEvaluationsAPI = async (boardId) => {
+  try {
+    const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/evaluation/evaluations?boardId=${boardId}`)
+    return response.data
+  } catch (error) {
+    console.error('Lỗi khi lấy danh sách đánh giá:', error)
+    throw error
+  }
+}
+
+// Lấy danh sách đánh giá của một user cụ thể trong board
+export const getUserEvaluationsAPI = async (boardId, userId) => {
+  try {
+    const response = await authorizedAxiosInstance.get(
+      `${API_ROOT}/v1/evaluation/user-evaluations?boardId=${boardId}&userId=${userId}`
+    )
+    return response.data
+  } catch (error) {
+    console.error('Lỗi khi lấy đánh giá của user:', error)
+    throw error
+  }
+}
+
+// Lấy các đánh giá mà user hiện tại đã thực hiện
+export const getMyEvaluationsAPI = async (boardId) => {
+  try {
+    const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/evaluation/my-evaluations?boardId=${boardId}`)
+    return response.data
+  } catch (error) {
+    console.error('Lỗi khi lấy đánh giá của tôi:', error)
+    throw error
+  }
+}
+
+// Cập nhật đánh giá (nếu cho phép chỉnh sửa)
+export const updateEvaluationAPI = async (evaluationId, updateData) => {
+  try {
+    const response = await authorizedAxiosInstance.put(
+      `${API_ROOT}/v1/evaluation/evaluations/${evaluationId}`,
+      updateData
+    )
+    toast.success('Cập nhật đánh giá thành công!', { theme: 'colored' })
+    return response.data
+  } catch (error) {
+    toast.error('Cập nhật đánh giá thất bại!', { theme: 'colored' })
+    throw error
+  }
+}
+
+// Xóa đánh giá (nếu có quyền)
+export const deleteEvaluationAPI = async (evaluationId) => {
+  try {
+    const response = await authorizedAxiosInstance.delete(`${API_ROOT}/v1/evaluation/evaluations/${evaluationId}`)
+    toast.success('Xóa đánh giá thành công!', { theme: 'colored' })
+    return response.data
+  } catch (error) {
+    toast.error('Xóa đánh giá thất bại!', { theme: 'colored' })
+    throw error
+  }
+}
+
+// ==================== EVALUATION STATISTICS APIs ====================
+
+// Lấy thống kê đánh giá của board
+export const getEvaluationStatsAPI = async (boardId) => {
+  try {
+    const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/evaluation/`)
+    return response.data
+  } catch (error) {
+    console.error('Lỗi khi lấy thống kê đánh giá:', error)
+    throw error
+  }
+}
+// ==================== SINGLE EVALUATION CRITERIA APIs ====================
+
+/**
+ * Tạo một tiêu chí đánh giá đơn lẻ
+ * @param {Object} payload - Dữ liệu tiêu chí
+ * @param {string} payload.boardId - ID của bảng
+ * @param {string} payload.title - Tiêu đề tiêu chí
+ * @returns {Promise} Promise trả về tiêu chí đã tạo
+ */
+export const createSingleEvaluationCriteriaAPI = async ({ boardId, title }) => {
+  try {
+    const response = await authorizedAxiosInstance.post(
+      `${API_ROOT}/v1/single`,
+      { boardId, title }
+    )
+    return response.data
+  } catch (error) {
+    toast.error('Thêm tiêu chí thất bại!', { theme: 'colored' })
+    throw error
+  }
+}
+
+/**
+ * Cập nhật một tiêu chí đánh giá đơn lẻ
+ * @param {string} criteriaId - ID của tiêu chí
+ * @param {Object} updateData - Dữ liệu cập nhật
+ * @param {string} updateData.title - Tiêu đề mới
+ * @returns {Promise} Promise trả về tiêu chí đã cập nhật
+ */
+export const updateSingleEvaluationCriteriaAPI = async (singleCriteriaId, updateData) => {
+  try {
+    const response = await authorizedAxiosInstance.put(
+      `${API_ROOT}/v1/single/${singleCriteriaId}`,
+      updateData
+    )
+    toast.success('Cập nhật tiêu chí thành công!', { theme: 'colored' })
+    return response.data
+  } catch (error) {
+    toast.error('Cập nhật tiêu chí thất bại!', { theme: 'colored' })
+    throw error
+  }
+}
+
+/**
+ * Xóa một tiêu chí đánh giá đơn lẻ
+ * @param {string} criteriaId - ID của tiêu chí
+ * @returns {Promise} Promise trả về kết quả xóa
+ */
+export const deleteSingleEvaluationCriteriaAPI = async (singleCriteriaId) => {
+  try {
+    const response = await authorizedAxiosInstance.delete(
+      `${API_ROOT}/v1/single/${singleCriteriaId}`
+    )
+    toast.success('Xóa tiêu chí thành công!', { theme: 'colored' })
+    return response.data
+  } catch (error) {
+    toast.error('Xóa tiêu chí thất bại!', { theme: 'colored' })
+    throw error
+  }
+}
+/**
+ * Lấy thông tin một tiêu chí đơn lẻ
+ * @param {string} criteriaId - ID của tiêu chí
+ * @returns {Promise} Promise trả về thông tin tiêu chí
+ */
+export const getSingleEvaluationCriteriaAPI = async (criteriaId) => {
+  try {
+    const response = await authorizedAxiosInstance.get(
+      `${API_ROOT}/v1/evaluation/criteria/single/${criteriaId}`
+    )
+    return response.data
+  } catch (error) {
+    console.error('Lỗi khi lấy thông tin tiêu chí:', error)
+    throw error
+  }
+}
+export const sendExplainAIRequestAPI = async ({ text }) => {
+  // Giả sử gọi API tới BE hoặc OpenAI
+  const response = await authorizedAxiosInstance.post('/v1/explain', { text })
+  return response.data
+}
+// Spell Check API
+export const checkSpellingAPI = async (text, language = 'auto') => {
+  try {
+    const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/spell-check`, {
+      text,
+      language
+    })
+    return response.data
+  } catch (error) {
+    console.error('Spell check API error:', error)
+    throw error
+  }
+}

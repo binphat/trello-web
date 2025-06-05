@@ -5,22 +5,11 @@ import CreditCardIcon from '@mui/icons-material/CreditCard'
 import CancelIcon from '@mui/icons-material/Cancel'
 import Grid from '@mui/material/Unstable_Grid2'
 import Stack from '@mui/material/Stack'
-import Divider from '@mui/material/Divider'
+import Popover from '@mui/material/Popover'
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined'
 import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined'
-import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined'
 import WatchLaterOutlinedIcon from '@mui/icons-material/WatchLaterOutlined'
-import AttachFileOutlinedIcon from '@mui/icons-material/AttachFileOutlined'
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined'
-import AutoFixHighOutlinedIcon from '@mui/icons-material/AutoFixHighOutlined'
-import AspectRatioOutlinedIcon from '@mui/icons-material/AspectRatioOutlined'
-import AddToDriveOutlinedIcon from '@mui/icons-material/AddToDriveOutlined'
-import AddOutlinedIcon from '@mui/icons-material/AddOutlined'
-import ArrowForwardOutlinedIcon from '@mui/icons-material/ArrowForwardOutlined'
-import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined'
-import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined'
-import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined'
-import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined'
 import SubjectRoundedIcon from '@mui/icons-material/SubjectRounded'
 import DvrOutlinedIcon from '@mui/icons-material/DvrOutlined'
 import { useDispatch, useSelector } from 'react-redux'
@@ -42,6 +31,11 @@ import { updateCardInBoard } from '~/redux/activeBoard/activeBoardSlice'
 import { selectCurrentUser } from '~/redux/User/userSlice'
 import { styled } from '@mui/material/styles'
 import { CARD_MEMBER_ACTIONS } from '~/utils/constants'
+import { useRef, useState } from 'react'
+import CardDatesPopover from '~/components/Modal/ActiveCard/CardDatesPopover'
+import { LocalizationProvider } from '@mui/x-date-pickers'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs' // hoặc date-fns/moment tùy bạn
+import LabelColorPicker from './LabelColorPicker'
 
 const SidebarItem = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -74,7 +68,10 @@ function ActiveCard() {
   // Không dùng biến state để check đóng mở modal nữa vì chúng ta sẽ check bên board/_id.jsx
   // const [isOpen, setIsOpen] = useState(true)
   // const handleOpenModal = () => setIsOpen(true)
-
+  const [anchorEl, setAnchorEl] = useState(null)
+  const handleUpdateDueDate = (newDate) => {
+    callApiUpdateCard({ dueDate: newDate })
+  }
   const handleCloseModal = () => {
     dispatch(cleaAndHideCurrentActiveCard())
   }
@@ -124,6 +121,24 @@ function ActiveCard() {
   const onUpdateCardMember = (incomingMemberInfo) => {
     callApiUpdateCard({ incomingMemberInfo })
   }
+  const [labelAnchorEl, setLabelAnchorEl] = useState(null)
+
+  const currentLabel = activeCard?.labelColor || '' // giả sử card có thuộc tính labelColor
+
+  const handleOpenLabelPicker = (e) => {
+    setLabelAnchorEl(e.currentTarget)
+  }
+
+  const handleCloseLabelPicker = () => {
+    setLabelAnchorEl(null)
+  }
+
+  const handleLabelChange = async (color) => {
+    await callApiUpdateCard({ labelColor: color })
+    handleCloseLabelPicker()
+  }
+
+  const isLabelPickerOpen = Boolean(labelAnchorEl)
   return (
     <Modal
       disableScrollLock
@@ -239,31 +254,42 @@ function ActiveCard() {
                 <VisuallyHiddenInput type="file" onChange={onUploadCardCover} />
               </SidebarItem>
 
-              <SidebarItem><AttachFileOutlinedIcon fontSize="small" />Attachment</SidebarItem>
-              <SidebarItem><LocalOfferOutlinedIcon fontSize="small" />Labels</SidebarItem>
-              <SidebarItem><TaskAltOutlinedIcon fontSize="small" />Checklist</SidebarItem>
-              <SidebarItem><WatchLaterOutlinedIcon fontSize="small" />Dates</SidebarItem>
-              <SidebarItem><AutoFixHighOutlinedIcon fontSize="small" />Custom Fields</SidebarItem>
-            </Stack>
-
-            <Divider sx={{ my: 2 }} />
-
-            <Typography sx={{ fontWeight: '600', color: 'primary.main', mb: 1 }}>Power-Ups</Typography>
-            <Stack direction="column" spacing={1}>
-              <SidebarItem><AspectRatioOutlinedIcon fontSize="small" />Card Size</SidebarItem>
-              <SidebarItem><AddToDriveOutlinedIcon fontSize="small" />Google Drive</SidebarItem>
-              <SidebarItem><AddOutlinedIcon fontSize="small" />Add Power-Ups</SidebarItem>
-            </Stack>
-
-            <Divider sx={{ my: 2 }} />
-
-            <Typography sx={{ fontWeight: '600', color: 'primary.main', mb: 1 }}>Actions</Typography>
-            <Stack direction="column" spacing={1}>
-              <SidebarItem><ArrowForwardOutlinedIcon fontSize="small" />Move</SidebarItem>
-              <SidebarItem><ContentCopyOutlinedIcon fontSize="small" />Copy</SidebarItem>
-              <SidebarItem><AutoAwesomeOutlinedIcon fontSize="small" />Make Template</SidebarItem>
-              <SidebarItem><ArchiveOutlinedIcon fontSize="small" />Archive</SidebarItem>
-              <SidebarItem><ShareOutlinedIcon fontSize="small" />Share</SidebarItem>
+              <SidebarItem onClick={handleOpenLabelPicker} sx={{ position: 'relative' }}>
+                <LocalOfferOutlinedIcon fontSize="small" /> Labels
+                {/* Hiển thị màu label hiện tại như 1 chấm nhỏ bên cạnh chữ */}
+                {currentLabel && (
+                  <Box sx={{
+                    width: 16, height: 16, borderRadius: '50%', bgcolor: currentLabel,
+                    ml: 1, border: '1px solid #ccc'
+                  }} />
+                )}
+              </SidebarItem>
+              <SidebarItem onClick={(e) => setAnchorEl(e.currentTarget)}>
+                <WatchLaterOutlinedIcon fontSize="small" /> Dates
+              </SidebarItem>
+              <Popover
+                open={isLabelPickerOpen}
+                anchorEl={labelAnchorEl}
+                onClose={handleCloseLabelPicker}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+              >
+                <Box sx={{ p: 1 }}>
+                  <LabelColorPicker
+                    currentCard={activeCard} // Sử dụng activeCard thay vì currentActiveCard
+                    currentLabel={activeCard?.labelColor}
+                    onChange={handleLabelChange} // Sử dụng function có sẵn
+                  />
+                </Box>
+              </Popover>
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <CardDatesPopover
+                  anchorEl={anchorEl}
+                  onClose={() => setAnchorEl(null)}
+                  dueDate={activeCard?.dueDate}
+                  onSave={handleUpdateDueDate}
+                />
+              </LocalizationProvider>
             </Stack>
           </Grid>
         </Grid>

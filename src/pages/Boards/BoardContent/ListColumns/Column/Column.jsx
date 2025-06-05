@@ -220,30 +220,6 @@ function Column({ column }) {
               </MenuItem>
 
               <Divider />
-
-              <MenuItem>
-                <ListItemIcon>
-                  <ContentCut fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>Cut</ListItemText>
-              </MenuItem>
-
-              <MenuItem>
-                <ListItemIcon>
-                  <ContentCopy fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>Copy</ListItemText>
-              </MenuItem>
-
-              <MenuItem>
-                <ListItemIcon>
-                  <ContentPaste fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>Paste</ListItemText>
-              </MenuItem>
-
-              <Divider />
-
               <MenuItem
                 onClick={handleDeleteColumn}
                 sx={{
@@ -258,8 +234,6 @@ function Column({ column }) {
                 <ListItemText>Delete this column
                 </ListItemText>
               </MenuItem>
-
-              <MenuItem><ListItemIcon><Cloud fontSize="small" /></ListItemIcon><ListItemText>Archive this column</ListItemText></MenuItem>
             </Menu>
           </Box>
         </Box>

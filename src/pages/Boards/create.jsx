@@ -73,7 +73,7 @@ function SidebarCreateBoardModal({ afterCreateNewBoard }) {
     <>
       <SidebarItem onClick={handleOpenModal}>
         <LibraryAddIcon fontSize="small" />
-        Create a new board
+        Tạo bảng
       </SidebarItem>
 
       <Modal
@@ -166,32 +166,6 @@ function SidebarCreateBoardModal({ afterCreateNewBoard }) {
                   * https://stackoverflow.com/a/73336101
                   * https://mui.com/material-ui/react-radio-button/
                 */}
-                <Controller
-                  name="type"
-                  defaultValue={BOARD_TYPES.PUBLIC}
-                  control={control}
-                  render={({ field }) => (
-                    <RadioGroup
-                      {...field}
-                      row
-                      onChange={(event, value) => field.onChange(value)}
-                      value={field.value}
-                    >
-                      <FormControlLabel
-                        value={BOARD_TYPES.PUBLIC}
-                        control={<Radio size="small" />}
-                        label="Public"
-                        labelPlacement="start"
-                      />
-                      <FormControlLabel
-                        value={BOARD_TYPES.PRIVATE}
-                        control={<Radio size="small" />}
-                        label="Private"
-                        labelPlacement="start"
-                      />
-                    </RadioGroup>
-                  )}
-                />
 
                 <Box sx={{ alignSelf: 'flex-end' }}>
                   <Button
