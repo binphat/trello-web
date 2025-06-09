@@ -5,7 +5,8 @@ import { toast } from 'react-toastify'
 
 // Khởi tạo giá trị State của một cái Slice (Mảnh) trong Redux
 const initialState = {
-  currentUser: null
+  currentUser: null,
+  token: typeof window !== 'undefined' ? localStorage.getItem('token') : null
 }
 
 // Các hành động gọi api (bất đồng bộ) và cập nhật dữ liệu vào Redux, dùng Middleware createAsyncThunk đi kèm với extraReducers
@@ -59,6 +60,21 @@ export const userSlice = createSlice({
     builder.addCase(updateUserAPI.fulfilled, (state, action) => {
       const user = action.payload
       state.currentUser = user
+    })
+    builder.addCase(loginUserAPI.fulfilled, (state, action) => {
+      const { user, token } = action.payload
+      state.currentUser = user
+      state.token = token
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('token', token)
+      }
+    })
+    builder.addCase(logoutUserAPI.fulfilled, (state) => {
+      state.currentUser = null
+      state.token = null
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token')
+      }
     })
   }
 })

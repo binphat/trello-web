@@ -7,10 +7,14 @@ import { API_ROOT } from '~/utils/constants'
 const getTokenFromPersist = () => {
   try {
     const persistedState = localStorage.getItem('persist:root')
+    console.log('🔍 Persisted state:', persistedState) // Debug line
     if (persistedState) {
       const parsedState = JSON.parse(persistedState)
+      console.log('🔍 Parsed state:', parsedState) // Debug line
       if (parsedState.user) {
         const userState = JSON.parse(parsedState.user)
+        console.log('🔍 User state:', userState) // Debug line
+        console.log('🔑 Token:', userState.currentUser?.accessToken) // Debug line
         return userState.currentUser?.accessToken || null
       }
     }
