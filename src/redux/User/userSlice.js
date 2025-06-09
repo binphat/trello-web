@@ -38,6 +38,7 @@ export const logoutUserAPI = createAsyncThunk(
     return response.data
   }
 )
+
 // Khởi tạo một cái Slice trong kho lưu trữ - Redux Store
 export const userSlice = createSlice({
   name: 'user',
@@ -47,33 +48,46 @@ export const userSlice = createSlice({
   // extraReducers: Nơi xử lý dữ liệu bất đồng bộ
   extraReducers: (builder) => {
     builder.addCase(loginUserAPI.fulfilled, (state, action) => {
-      const { user, token } = action.payload
-      state.currentUser = user
-      state.token = token
+      // ✅ FIX: Backend trả về tất cả data ở cùng level, không có nested { user, token }
+      const userData = action.payload
+
+      // Tách token ra khỏi userData
+      const { accessToken, refreshToken, ...userInfo } = userData
+
+      // Lưu user info (không bao gồm token)
+      state.currentUser = userInfo
+
+      // Lưu accessToken
+      state.token = accessToken
+
       if (typeof window !== 'undefined') {
-        localStorage.setItem('token', token)
+        localStorage.setItem('token', accessToken)
       }
+
+      // ✅ Debug log
+      console.log('✅ User stored in Redux:', userInfo)
+      console.log('✅ Token stored in Redux:', accessToken)
     })
-      // ✅ Thêm xử lý khi login thất bại
       .addCase(loginUserAPI.rejected, (state, action) => {
+      // ✅ Xử lý khi login thất bại
         state.currentUser = null
         state.token = null
-        console.error('Login failed:', action.error)
+        console.error('❌ Login failed:', action.error)
       })
-    builder.addCase(logoutUserAPI.fulfilled, (state) => {
-      state.currentUser = null
-      state.token = null
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('token')
-      }
-    })
-    builder.addCase(updateUserAPI.fulfilled, (state, action) => {
-      const user = action.payload
-      state.currentUser = user
-    })
-
+      .addCase(logoutUserAPI.fulfilled, (state) => {
+        state.currentUser = null
+        state.token = null
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('token')
+        }
+      })
+      .addCase(updateUserAPI.fulfilled, (state, action) => {
+        const user = action.payload
+        state.currentUser = user
+      })
   }
 })
+
 // Actions: Là nơi định nghĩa cho các components bên dưới gọi bằng dispatch() tới nó để cập nhật lại dữ liệu thông qua reducer (chạy đồng bộ)
 //
 // Để ý ở trên thì không thấy properties actions đâu cả, bởi vì cái actions này đơn giản là được thằng redux tạo tự động theo tên của reducer nhé.

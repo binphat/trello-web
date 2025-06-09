@@ -24,15 +24,16 @@ let authorizedAxiosInstance = axios.create({
 
 // Thêm interceptor cho request
 authorizedAxiosInstance.interceptors.request.use((config) => {
-  // Lấy token từ Redux store (thay vì localStorage để tránh vấn đề với chế độ ẩn danh)
+  // ✅ FIX: Lấy token từ Redux store với cấu trúc mới
   const state = axiosReduxStore?.getState()
-  const token = state?.user?.currentUser?.accessToken || state?.user?.token
+  const token = state?.user?.token || state?.user?.currentUser?.accessToken
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
     console.log('🔑 Added token to request:', token.substring(0, 20) + '...')
   } else {
     console.log('⚠️ No token found in Redux store')
+    console.log('🔍 Current Redux state:', state?.user)
   }
 
   // Debug thông tin request
@@ -76,15 +77,20 @@ authorizedAxiosInstance.interceptors.response.use(
         if (!refreshTokenPromise) {
           refreshTokenPromise = refreshTokenAPI()
             .then(data => {
-              // Cập nhật token mới vào Redux store
+              // ✅ FIX: Cập nhật token mới vào Redux store với cấu trúc mới
+              const currentState = axiosReduxStore.getState()
               const newUserData = {
-                ...axiosReduxStore.getState().user.currentUser,
-                accessToken: data?.accessToken
+                ...currentState.user.currentUser,
+                // Lưu token vào state.token thay vì trong currentUser
               }
 
+              // Dispatch action để cập nhật token
               axiosReduxStore.dispatch({
                 type: 'user/loginUserAPI/fulfilled',
-                payload: newUserData
+                payload: {
+                  ...newUserData,
+                  accessToken: data?.accessToken
+                }
               })
               return data?.accessToken
             })
