@@ -15,6 +15,8 @@ export const loginUserAPI = createAsyncThunk(
   'user/loginUserAPI',
   async (data) => {
     const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/users/login`, data)
+    // ✅ Debug: Kiểm tra response
+    console.log('Login Response:', response.data)
     // Lưu ý: Axios sẽ trả về kết quả về qua property của nó là data
     return response.data
   }
@@ -52,6 +54,12 @@ export const userSlice = createSlice({
         localStorage.setItem('token', token)
       }
     })
+      // ✅ Thêm xử lý khi login thất bại
+      .addCase(loginUserAPI.rejected, (state, action) => {
+        state.currentUser = null
+        state.token = null
+        console.error('Login failed:', action.error)
+      })
     builder.addCase(logoutUserAPI.fulfilled, (state) => {
       state.currentUser = null
       state.token = null

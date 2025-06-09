@@ -24,6 +24,7 @@ import Boards from './pages/Boards'
  * private-routes/
  */
 const ProtectedRoute = ({ user }) => {
+  console.log('ProtectedRoute - Current user:', user) // ✅ Thêm log này
   if (!user) return <Navigate to='/login' replace={true}/>
   return <Outlet />
 }

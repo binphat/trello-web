@@ -32,18 +32,32 @@ function LoginForm() {
   let [searchParams] = useSearchParams()
   const registeredEmail = searchParams.get('registeredEmail')
   const verifiedEmail = searchParams.get('verifiedEmail')
-  const submitLogIn = (data) => {
+  
+  const submitLogIn = async (data) => {
     const { email, password } = data
-    toast.promise(
-      dispatch(loginUserAPI({ email, password })),
-      { pending: 'Đang đăng nhập' }
-    ).then(res => {
-      console.log(res)
+    
+    try {
+      // ✅ Sử dụng await để chờ kết quả
+      const resultAction = await dispatch(loginUserAPI({ email, password }))
       
-      // Đoạn này kiểm tra không có lỗi (Login thành công) thì mới điều hướng về route "/"
-      if (!res.error) navigate('/')
-    })
+      // ✅ Kiểm tra đúng cách với createAsyncThunk
+      if (loginUserAPI.fulfilled.match(resultAction)) {
+        // Login thành công
+        console.log('✅ Login successful:', resultAction.payload)
+        toast.success('Đăng nhập thành công!')
+        navigate('/')
+      } else if (loginUserAPI.rejected.match(resultAction)) {
+        // Login thất bại
+        console.error('❌ Login failed:', resultAction.error)
+        const errorMessage = resultAction.error?.message || 'Đăng nhập thất bại'
+        toast.error(errorMessage)
+      }
+    } catch (error) {
+      console.error('❌ Login error:', error)
+      toast.error('Có lỗi xảy ra khi đăng nhập')
+    }
   }
+
   return (
     <form onSubmit={handleSubmit(submitLogIn)}>
       <Zoom in={true} style={{ transitionDelay: '200ms' }}>
