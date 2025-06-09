@@ -39,6 +39,7 @@ function LoginForm() {
       { pending: 'Đang đăng nhập' }
     ).then(res => {
       console.log(res)
+      
       // Đoạn này kiểm tra không có lỗi (Login thành công) thì mới điều hướng về route "/"
       if (!res.error) navigate('/')
     })

@@ -29,13 +29,23 @@ authorizedAxiosInstance.defaults.withCredentials = true
  * Cấu hình Interceptors (Bộ đánh chặn vào giữa mọi Request & Response)
  * https://axios-http.com/docs/interceptors
  */
-// Thêm vào authorizedAxiosInstance interceptor
+// authorizeAxios.js - Sửa lại interceptor request
 authorizedAxiosInstance.interceptors.request.use((config) => {
-  // Debug: Log ra để xem cookie có được gửi không
-  console.log('🔍 Request URL:', config.url)
-  console.log('🍪 Document cookies:', document.cookie)
+  // 🔧 Lấy token từ Redux store thay vì cookie
+  const state = axiosReduxStore.getState()
+  const token = state.user.currentUser?.accessToken
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+    console.log('🔑 Added token to request:', token.substring(0, 20) + '...')
+  } else {
+    console.log('⚠️ No token found in Redux store')
+  }
+
+  // Debug info
+  console.log('🚀 Making request to:', config.url)
   console.log('🔍 Request headers:', config.headers)
-  
+
   interceptorLoadingElements(true)
   return config
 }, (error) => {
@@ -60,7 +70,6 @@ authorizedAxiosInstance.interceptors.request.use((config) => {
 authorizedAxiosInstance.interceptors.response.use( (response) => {
   // Kỹ thuật chặn spam click
   interceptorLoadingElements(false)
-
   return response
 }, (error) => {
   // Bất kỳ mã trạng thái nào nằm ngoài phạm vi 2xx sẽ khiến hàm này kích hoạt
@@ -71,6 +80,7 @@ authorizedAxiosInstance.interceptors.response.use( (response) => {
   interceptorLoadingElements(false)
   // Trường hợp 1: Nếu nhận được mã lỗi 401 từ Backend (BE), thì thực hiện gọi API đăng xuất ngay lập tức.
   if (error.response?.status === 401) {
+    console.log('🚫 401 Unauthorized - dispatching logout')
     axiosReduxStore.dispatch(logoutUserAPI(false))
   }
   // Trường hợp 2: Nếu nhận được mã lỗi 410 từ Backend (BE), thì sẽ gọi API để làm mới token (refresh token) và cấp lại Access Token mới.
@@ -85,6 +95,17 @@ authorizedAxiosInstance.interceptors.response.use( (response) => {
     if (!refreshTokenPromise) {
       refreshTokenPromise = refreshTokenAPI()
         .then(data => {
+          // Cập nhật token mới vào Redux store
+          const newUserData = {
+            ...axiosReduxStore.getState().user.currentUser,
+            accessToken: data?.accessToken
+          }
+
+          // Dispatch action để update token
+          axiosReduxStore.dispatch({
+            type: 'user/loginUserAPI/fulfilled',
+            payload: newUserData
+          })
           // Đồng thời access đã nằm trong httpOnly cookie (xử lý từ phía BE)
           return data?.accessToken
         })
@@ -101,6 +122,8 @@ authorizedAxiosInstance.interceptors.response.use( (response) => {
     // Cần return trường hợp refreshTokenPromise chạy thành công và xử lý thêm ở đây:
     // eslint-disable-next-line no-unused-vars
     return refreshTokenPromise.then(accessToken => {
+      // Add token to retry request
+      originalRequests.headers.Authorization = `Bearer ${accessToken}`
     /**
      * Bước 1: Đối với trường hợp nếu dự án cần lưu accessToken vào localStorage hoặc cookie (ngoài việc BE đã xử lý),
      * thì viết thêm code xử lý ở đây.
