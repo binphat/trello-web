@@ -24,12 +24,24 @@ import Boards from './pages/Boards'
  * private-routes/
  */
 const ProtectedRoute = ({ user }) => {
-  console.log('ProtectedRoute - Current user:', user) // ✅ Thêm log này
+  // ✅ Enhanced debugging
+  console.log('🛡️ ProtectedRoute check:', {
+    user: user,
+    hasUser: !!user,
+    userId: user?._id || user?.id,
+    email: user?.email
+  })
   if (!user) return <Navigate to='/login' replace={true}/>
   return <Outlet />
 }
 function App() {
   const currentUser = useSelector(selectCurrentUser)
+    // ✅ Debug current user state
+    console.log('🎯 App render - Current user from Redux:', {
+      currentUser,
+      hasUser: !!currentUser,
+      userId: currentUser?._id || currentUser?.id
+    })
   return (
     <Routes>
       <Route path='/' element={
