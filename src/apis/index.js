@@ -57,6 +57,9 @@ export const registerUserAPI = async (data) => {
 
 export const verifyUserAPI = async (data) => {
   const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/users/verify`, data)
+  // Debug: Kiểm tra cookie được set chưa
+  console.log('🍪 Cookies after verify:', document.cookie)
+  console.log('🔍 Response headers:', response.headers)
   toast.success('Tài khoản đã xác minh thành công! Bây giờ bạn có thể đăng nhập để tận hưởng các dịch vụ của chúng tôi! Chúc một ngày tốt lành!', { theme: 'colored' })
   return response.data
 }

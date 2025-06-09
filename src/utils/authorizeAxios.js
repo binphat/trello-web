@@ -29,6 +29,18 @@ authorizedAxiosInstance.defaults.withCredentials = true
  * Cấu hình Interceptors (Bộ đánh chặn vào giữa mọi Request & Response)
  * https://axios-http.com/docs/interceptors
  */
+// Thêm vào authorizedAxiosInstance interceptor
+authorizedAxiosInstance.interceptors.request.use((config) => {
+  // Debug: Log ra để xem cookie có được gửi không
+  console.log('🔍 Request URL:', config.url)
+  console.log('🍪 Document cookies:', document.cookie)
+  console.log('🔍 Request headers:', config.headers)
+  
+  interceptorLoadingElements(true)
+  return config
+}, (error) => {
+  return Promise.reject(error)
+})
 let refreshTokenPromise = null
 // Interceptor request: Can thiệt vào giữa những cái request API
 authorizedAxiosInstance.interceptors.request.use((config) => {
