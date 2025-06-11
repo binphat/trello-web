@@ -7,10 +7,13 @@ import CommentIcon from '@mui/icons-material/Comment'
 import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 import AttachmentIcon from '@mui/icons-material/Attachment'
+import DeleteIcon from '@mui/icons-material/Delete'
+import IconButton from '@mui/material/IconButton'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useDispatch } from 'react-redux'
 import { updateCurrentActiveCard, showModalActiveCard } from '~/redux/activeCard/activeCardSlice'
+import { deleteCardAPI } from '~/redux/activeBoard/activeBoardSlice'
 import EventNoteIcon from '@mui/icons-material/EventNote' // Icon lịch nhỏ
 import dayjs from 'dayjs'
 import Box from '@mui/material/Box'
@@ -36,11 +39,32 @@ function Card({ card }) {
     return !!card?.memberIds?.length || !!card?.comments?.length || !!card?.attachments?.length
   }
 
-  const setActiveCard = () => {
+  const setActiveCard = (e) => {
+    // Ngăn không cho click vào delete button trigger modal
+    if (e.target.closest('.delete-card-btn')) {
+      return
+    }
+    
     // Cập nhật data cho activeCard trong redux
     dispatch(updateCurrentActiveCard(card))
     // Hiện Modal ActiveCard lên
     dispatch(showModalActiveCard())
+  }
+
+  const handleDeleteCard = (e) => {
+    e.stopPropagation() // Ngăn event bubbling
+    
+    if (window.confirm('Bạn có chắc chắn muốn xóa card này không?')) {
+      dispatch(deleteCardAPI(card._id))
+        .unwrap()
+        .then(() => {
+          console.log('Card deleted successfully!')
+        })
+        .catch((error) => {
+          console.error('Error deleting card:', error)
+          alert('Có lỗi xảy ra khi xóa card. Vui lòng thử lại!')
+        })
+    }
   }
 
   // Format ngày, ví dụ format dạng 'DD/MM/YYYY' hoặc 'MMM D'
@@ -63,12 +87,40 @@ function Card({ card }) {
           pointerEvents: card.FE_PlaceholderCard ? 'none' : 'unset',
           position: card.FE_PlaceholderCard ? 'fixed' : 'unset',
           border: '1px solid transparent',
-          '&:hover': { borderColor: (theme) => theme.palette.primary.main }
+          '&:hover': { 
+            borderColor: (theme) => theme.palette.primary.main,
+            '& .delete-card-btn': {
+              opacity: 1
+            }
+          }
         }}>
         
         {card?.cover && <CardMedia sx={{ height: 140 }} image={card?.cover} />}
         
         <CardContent sx={{ p: 1.5, '&:last-child': { p: 1.5 }, position: 'relative' }}>
+          {/* Delete Button - Only show on hover */}
+          {!card.FE_PlaceholderCard && (
+            <IconButton
+              className="delete-card-btn"
+              size="small"
+              onClick={handleDeleteCard}
+              sx={{
+                position: 'absolute',
+                top: 4,
+                right: 4,
+                opacity: 0,
+                transition: 'opacity 0.2s',
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 1)',
+                  color: 'error.main'
+                }
+              }}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          )}
+
           {/* Label Color Indicator - Updated positioning and styling */}
           {card.labelColor && (
             <Box sx={{

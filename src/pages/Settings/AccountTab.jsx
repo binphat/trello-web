@@ -70,8 +70,12 @@ function AccountTab() {
       dispatch(updateUserAPI(reqData)),
       { pending: 'Đang Cập Nhật' }
     ).then((res) => {
+      console.log('Full response:', res)
+      console.log('Payload data:', res.payload)
+      console.log('Avatar URL:', res.payload?.avatar)
       // Đoạn này phải kiểm tra không có lỗi (update thành công) thì mới thực hiện các hành động cần thiết
       if (!res.error) {
+        console.log('New avatar URL:', res.payload?.avatar) // Thêm dòng này
         toast.success('Đã cập nhật ảnh bìa')
       }
       // Lưu ý, dù có lỗi hoặc thành công thì cũng phải clear giá trị của file input, nếu không thì sẽ không thể chọn cùng một file liên tiếp được

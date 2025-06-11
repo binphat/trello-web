@@ -1,3 +1,4 @@
+
 /* eslint-disable react/no-unknown-property */
 import { useState, useRef, useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
@@ -8,12 +9,10 @@ import {
   Typography,
   IconButton,
   Paper,
-  CircularProgress,
   Avatar,
   Fade,
   Slide,
-  Chip,
-  Grid
+  Chip
 } from '@mui/material'
 import {
   Close as CloseIcon,
@@ -21,38 +20,29 @@ import {
   SmartToy as SmartToyIcon,
   Person as PersonIcon,
   Chat as ChatIcon,
-  AutoAwesome as SparklesIcon,
-  School as SchoolIcon,
-  Psychology as PsychologyIcon,
-  Science as ScienceIcon,
   Calculate as CalculateIcon,
-  Language as LanguageIcon,
-  History as HistoryIcon
+  Add as AddIcon,
+  ViewColumn as ViewColumnIcon, // Thay đổi icon
 } from '@mui/icons-material'
-import { toggleChatbot, addUserMessage, sendMessageToGemini } from '~/redux/chatBot/ChatBotSlice'
 
+import { toggleChatbot, addUserMessage, sendMessageToGemini } from '~/redux/chatBot/ChatBotSlice'
+import { addColumnsToCurrentBoard } from '~/redux/activeBoard/activeBoardSlice' // Import action mới
+  
 const ChatBot = () => {
   const dispatch = useDispatch()
   const { isOpen, messages, isLoading } = useSelector(state => state.chatbot)
+  const { isCreatingBoard, currentActiveBoard } = useSelector(state => state.activeBoard) // Thêm currentActiveBoard
   const [input, setInput] = useState('')
   const [showTopicInput, setShowTopicInput] = useState(false)
   const [userTopic, setUserTopic] = useState('')
+  const [showColumnCreation, setShowColumnCreation] = useState(false) // Đổi tên
+  const [columnCreationData, setColumnCreationData] = useState(null) // Đổi tên
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
   const topicInputRef = useRef(null)
 
-  // Đề xuất câu hỏi học thuật theo chủ đề
+  // Rút ngắn chỉ còn 1 category
   const academicSuggestions = [
-    {
-      category: 'Làm việc nhóm', 
-      icon: <PsychologyIcon sx={{ fontSize: 16 }} />,
-      questions: [
-        'Làm sao phân chia công việc nhóm công bằng?',
-        'Xử lý thành viên nhóm không hợp tác như thế nào?',
-        'Cách thuyết trình nhóm tự tin và hiệu quả',
-        'Tôi ngại nói chuyện trong nhóm, phải làm sao?'
-      ]
-    },
     {
       category: 'Chủ đề nhóm đã chọn',
       icon: <CalculateIcon sx={{ fontSize: 16 }} />,
@@ -63,28 +53,216 @@ const ChatBot = () => {
         'Chia nhỏ chủ đề thành các công việc cụ thể'
       ],
       requiresTopic: true
-    },
-    {
-      category: 'Kỹ năng viết',
-      icon: <LanguageIcon sx={{ fontSize: 16 }} />,
-      questions: [
-        'Cách viết báo cáo không bị chấm điểm thấp',
-        'Làm sao để bài luận có ý tưởng hay hơn?',
-        'Tìm tài liệu tham khảo uy tín ở đâu?',
-        'Cách trích dẫn nguồn cho đúng chuẩn'
-      ]
-    },
-    {
-      category: 'Vấn đề học tập',
-      icon: <ScienceIcon sx={{ fontSize: 16 }} />,
-      questions: [
-        'Tôi học mãi không thuộc, có cách nào không?',
-        'Làm sao để tập trung khi học ở nhà?',
-        'Cách quản lý thời gian học nhiều môn cùng lúc',
-        'Tôi hay lo lắng trước khi thi, phải làm gì?'
-      ]
     }
   ]
+
+  // Hàm làm sạch và trích xuất từ khóa chính
+  const cleanAndExtractKeywords = (text) => {
+    if (!text || typeof text !== 'string') return ''
+    
+    // Loại bỏ các ký tự đặc biệt và markdown
+    let cleaned = text
+      .replace(/[#*_`]/g, '') // Loại bỏ markdown
+      .replace(/card title\s*=\s*/gi, '') // Loại bỏ "card title ="
+      .replace(/title\s*[:=]\s*/gi, '') // Loại bỏ "title:" hoặc "title ="
+      .replace(/^\d+\.\s*/, '') // Loại bỏ số thứ tự đầu dòng
+      .replace(/^[-*+]\s*/, '') // Loại bỏ bullet points
+      .replace(/[()[\]{}]/g, '') // Loại bỏ dấu ngoặc
+      .replace(/\s+/g, ' ') // Chuẩn hóa khoảng trắng
+      .trim()
+
+    // Loại bỏ các từ không có ý nghĩa
+    const meaninglessWords = [
+      'và nhiều hơn thế nữa', 'nhiều hơn nữa', 'vv', 'v.v',
+      'etc', 'example', 'ví dụ', 'chẳng hạn', 'như là',
+      'bao gồm', 'gồm có', 'such as', 'including'
+    ]
+    
+    meaninglessWords.forEach(word => {
+      const regex = new RegExp(word, 'gi')
+      cleaned = cleaned.replace(regex, '')
+    })
+
+    // Loại bỏ các cụm từ thừa ở cuối
+    cleaned = cleaned
+      .replace(/[,;:]$/, '') // Loại bỏ dấu phẩy, chấm phẩy ở cuối
+      .replace(/\s+$/, '') // Loại bỏ khoảng trắng cuối
+      .trim()
+
+    return cleaned
+  }
+
+  // Kiểm tra xem text có phải là title có ý nghĩa không
+  const isValidTitle = (text, isColumn = false) => {
+    if (!text || typeof text !== 'string') return false
+    
+    const cleaned = cleanAndExtractKeywords(text)
+    
+    // Kiểm tra độ dài
+    if (cleaned.length < 3 || cleaned.length >= 50) return false
+    
+    // Loại bỏ những title không có ý nghĩa
+    const invalidPatterns = [
+      /^[.]{3,}/, // Dấu ba chấm
+      /^[=\-_]{2,}/, // Dấu gạch ngang liên tiếp
+      /^\s*$/, // Chỉ có khoảng trắng
+      /^(title|tiêu đề|tên|name)\s*[:=]?\s*$/i, // Chỉ là từ "title"
+      /^(card|thẻ|nhiệm vụ|task)\s*[:=]?\s*$/i, // Chỉ là từ "card"
+      /^[0-9]+\s*[:.]?\s*$/i, // Chỉ là số
+      /^[a-z]\s*[:.]?\s*$/i, // Chỉ là một chữ cái
+    ]
+    
+    const hasInvalidPattern = invalidPatterns.some(pattern => pattern.test(cleaned))
+    if (hasInvalidPattern) return false
+    
+    // Kiểm tra có ít nhất một từ có ý nghĩa (từ có ít nhất 2 ký tự)
+    const meaningfulWords = cleaned.split(/\s+/).filter(word => 
+      word.length >= 2 && !/^[0-9]+$/.test(word)
+    )
+    
+    if (meaningfulWords.length === 0) return false
+    
+    // Đối với column, yêu cầu nghiêm ngặt hơn
+    if (isColumn) {
+      // Loại bỏ các từ thường gặp trong tài liệu/nguồn tham khảo
+      const excludeForColumn = [
+        'tài liệu', 'nguồn', 'tham khảo', 'references', 'sources',
+        'bibliography', 'link', 'website', 'url'
+      ]
+      const hasExcludedWords = excludeForColumn.some(word => 
+        cleaned.toLowerCase().includes(word.toLowerCase())
+      )
+      if (hasExcludedWords) return false
+    }
+    
+    return true
+  }
+
+  // Parse ChatBot response to extract column structure (thay vì board structure)
+  const parseColumnStructure = (response) => {
+    if (!response || typeof response !== 'string') {
+      console.warn('Invalid response provided to parseColumnStructure:', response)
+      return []
+    }
+
+    const lines = response.split('\n').filter(line => line && typeof line === 'string' && line.trim())
+    const columns = []
+    let currentColumn = null
+    
+    lines.forEach(line => {
+      if (!line || typeof line !== 'string') return
+      
+      const trimmedLine = line.trim()
+      if (!trimmedLine) return
+      
+      // Detect column headers
+      const columnPatterns = [
+        /^##\s*(.+)$/,
+        /^\*\*(.+?)\*\*:?$/,
+        /^\d+\.\s*(.+)$/,
+        /^[A-Z][^:]*:$/,
+        /^-\s*([A-Z][^-]*?)(?:\s*[-:].*)?$/
+      ]
+      
+      let isColumn = false
+      let columnTitle = ''
+      
+      for (let pattern of columnPatterns) {
+        const match = trimmedLine.match(pattern)
+        if (match && match[1]) {
+          const rawTitle = match[1].trim()
+          const cleanedTitle = cleanAndExtractKeywords(rawTitle)
+          
+          if (isValidTitle(cleanedTitle, true)) {
+            columnTitle = cleanedTitle
+            isColumn = true
+            break
+          }
+        }
+      }
+      
+      if (isColumn && columnTitle) {
+        if (currentColumn && currentColumn.cards.length > 0) {
+          columns.push(currentColumn)
+        }
+        
+        currentColumn = {
+          title: columnTitle,
+          cards: [],
+          color: getRandomColor()
+        }
+      } else if (currentColumn) {
+        const cardPatterns = [
+          /^[-*+]\s*(.+)$/,
+          /^\d+\.\s*(.+)$/,
+          /^[•·▪▫]\s*(.+)$/
+        ]
+        
+        for (let pattern of cardPatterns) {
+          const match = trimmedLine.match(pattern)
+          if (match && match[1]) {
+            const rawCardTitle = match[1].trim()
+            const cleanedCardTitle = cleanAndExtractKeywords(rawCardTitle)
+            
+            if (isValidTitle(cleanedCardTitle, false)) {
+              currentColumn.cards.push(cleanedCardTitle)
+            }
+            break
+          }
+        }
+      }
+    })
+    
+    if (currentColumn && currentColumn.cards.length > 0) {
+      columns.push(currentColumn)
+    }
+    
+    // Nếu không tìm thấy cấu trúc rõ ràng, tạo columns mặc định với titles dưới 50 ký tự
+    if (columns.length === 0) {
+      return [
+        {
+          title: 'Cần làm',
+          color: '#ff6b6b',
+          cards: ['Phân tích yêu cầu', 'Thu thập tài liệu', 'Lập kế hoạch chi tiết']
+        },
+        {
+          title: 'Đang làm',
+          color: '#4ecdc4',
+          cards: ['Nghiên cứu chủ đề', 'Soạn thảo outline']
+        },
+        {
+          title: 'Hoàn thành',
+          color: '#45b7d1',
+          cards: ['Xác định chủ đề']
+        }
+      ]
+    }
+    
+    return columns
+  }
+
+  const getRandomColor = () => {
+    const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffd93d', '#6c5ce7', '#fd79a8', '#00b894']
+    return colors[Math.floor(Math.random() * colors.length)]
+  }
+
+  // Check if the latest bot message contains actionable content
+  useEffect(() => {
+    if (messages.length > 0 && userTopic && currentActiveBoard) { // Thêm kiểm tra currentActiveBoard
+      const lastMessage = messages[messages.length - 1]
+      if (lastMessage && lastMessage.isBot && lastMessage.text && !showColumnCreation) {
+        try {
+          const columnsData = parseColumnStructure(lastMessage.text) // Thay đổi tên function
+          if (columnsData && columnsData.length > 0) {
+            setColumnCreationData(columnsData) // Đổi tên state
+            setShowColumnCreation(true) // Đổi tên state
+          }
+        } catch (error) {
+          console.error('Error parsing column structure:', error)
+        }
+      }
+    }
+  }, [messages, userTopic, currentActiveBoard]) // Thêm currentActiveBoard vào dependencies
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -105,6 +283,8 @@ const ChatBot = () => {
 
   const handleClose = () => {
     dispatch(toggleChatbot())
+    setShowColumnCreation(false) // Đổi tên
+    setColumnCreationData(null) // Đổi tên
   }
 
   const handleInputChange = (e) => {
@@ -117,6 +297,7 @@ const ChatBot = () => {
     dispatch(addUserMessage(input))
     dispatch(sendMessageToGemini({ message: input }))
     setInput('')
+    setShowColumnCreation(false)
   }
 
   const handleKeyPress = (e) => {
@@ -126,17 +307,12 @@ const ChatBot = () => {
     }
   }
 
-  const handleSuggestionClick = (question, requiresTopic = false) => {
-    if (requiresTopic) {
-      setShowTopicInput(true)
-      setInput(question)
-      setTimeout(() => {
-        topicInputRef.current?.focus()
-      }, 100)
-    } else {
-      setInput(question)
-      inputRef.current?.focus()
-    }
+  const handleSuggestionClick = (question) => {
+    setShowTopicInput(true)
+    setInput(question)
+    setTimeout(() => {
+      topicInputRef.current?.focus()
+    }, 100)
   }
 
   const handleTopicSubmit = () => {
@@ -146,9 +322,7 @@ const ChatBot = () => {
     dispatch(addUserMessage(finalMessage))
     dispatch(sendMessageToGemini({ message: finalMessage }))
     
-    // Reset states
     setInput('')
-    setUserTopic('')
     setShowTopicInput(false)
   }
 
@@ -165,9 +339,32 @@ const ChatBot = () => {
     setInput('')
   }
 
+  // Tạo columns trong board hiện tại thay vì tạo board mới
+  const handleAddColumnsToBoard = async () => {
+    if (!columnCreationData || isCreatingBoard || !currentActiveBoard) return
+
+    try {
+      // Dispatch action để thêm columns vào board hiện tại
+      await dispatch(addColumnsToCurrentBoard({
+        columnsData: columnCreationData
+      }))
+
+      setShowColumnCreation(false)
+      setColumnCreationData(null)
+      
+      // Thông báo thành công
+      const successMessage = `Đã thêm ${columnCreationData.length} cột mới vào board "${currentActiveBoard.title}"! 🎉`
+      dispatch(addUserMessage(successMessage))
+      
+    } catch (error) {
+      console.error('Error adding columns to board:', error)
+      dispatch(addUserMessage('Có lỗi xảy ra khi thêm cột vào board. Vui lòng thử lại.'))
+    }
+  }
+
   return (
     <>
-      {/* Chat Toggle Button - Enhanced */}
+      {/* Chat Toggle Button */}
       <Fade in={!isOpen}>
         <Button
           variant='contained'
@@ -181,44 +378,20 @@ const ChatBot = () => {
             borderRadius: '50%',
             minWidth: 'unset',
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            boxShadow: '0 12px 35px rgba(102, 126, 234, 0.4), 0 0 0 0 rgba(102, 126, 234, 0.7)',
+            boxShadow: '0 12px 35px rgba(102, 126, 234, 0.4)',
             zIndex: 1000,
             transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-            animation: 'glow 3s ease-in-out infinite alternate',
             '&:hover': {
-              transform: 'scale(1.15) rotate(10deg)',
-              boxShadow: '0 20px 50px rgba(102, 126, 234, 0.6), 0 0 30px rgba(118, 75, 162, 0.4)',
-              background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)'
-            },
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: '-3px',
-              right: '-3px',
-              width: '16px',
-              height: '16px',
-              backgroundColor: '#ff6b6b',
-              borderRadius: '50%',
-              border: '3px solid white',
-              animation: 'heartbeat 2s infinite',
-              boxShadow: '0 2px 8px rgba(255, 107, 107, 0.4)'
-            },
-            '&::after': {
-              content: '""',
-              position: 'absolute',
-              inset: '-4px',
-              borderRadius: '50%',
-              background: 'linear-gradient(45deg, transparent, rgba(102, 126, 234, 0.3), transparent)',
-              animation: 'rotate 3s linear infinite',
-              zIndex: -1
+              transform: 'scale(1.15)',
+              boxShadow: '0 20px 50px rgba(102, 126, 234, 0.6)'
             }
           }}
         >
-          <ChatIcon sx={{ fontSize: '32px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }} />
+          <ChatIcon sx={{ fontSize: '32px' }} />
         </Button>
       </Fade>
 
-      {/* Chat Window - Enhanced */}
+      {/* Chat Window */}
       {isOpen && (
         <Slide direction='up' in={isOpen} mountOnEnter unmountOnExit>
           <Paper
@@ -235,122 +408,74 @@ const ChatBot = () => {
               background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
               display: 'flex',
               flexDirection: 'column',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.8)',
-              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.5)'
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.15)'
             }}
           >
-            {/* Header - Enhanced */}
+            {/* Header */}
             <Box
               sx={{
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                p: 3.5,
+                p: 3,
                 color: 'white',
-                position: 'relative',
-                overflow: 'hidden',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: '-50%',
-                  left: '-50%',
-                  width: '200%',
-                  height: '200%',
-                  background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)',
-                  animation: 'float 8s ease-in-out infinite'
-                },
-                '&::after': {
-                  content: '""',
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  height: '1px',
-                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)'
-                }
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
               }}
             >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
-                  <Avatar 
-                    sx={{ 
-                      bgcolor: 'rgba(255,255,255,0.25)',
-                      backdropFilter: 'blur(15px)',
-                      border: '2px solid rgba(255,255,255,0.4)',
-                      width: 48,
-                      height: 48,
-                      boxShadow: '0 8px 20px rgba(0,0,0,0.15)'
-                    }}
-                  >
-                    <SmartToyIcon sx={{ fontSize: 24 }} />
-                  </Avatar>
-                  <Box>
-                    <Typography variant='h6' sx={{ fontWeight: 700, mb: 0.5, fontSize: '18px' }}>
-                      Gemini Assistant
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <Box 
-                        sx={{ 
-                          width: '10px', 
-                          height: '10px', 
-                          bgcolor: '#4ade80', 
-                          borderRadius: '50%',
-                          animation: 'pulse 2s infinite',
-                          boxShadow: '0 0 8px rgba(74, 222, 128, 0.6)'
-                        }} 
-                      />
-                      <Typography variant='caption' sx={{ opacity: 0.95, fontWeight: 500 }}>
-                        Sẵn sàng hỗ trợ bạn
-                      </Typography>
-                    </Box>
-                  </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.25)' }}>
+                  <SmartToyIcon />
+                </Avatar>
+                <Box>
+                  <Typography variant='h6' sx={{ fontWeight: 700 }}>
+                    Gemini Assistant
+                  </Typography>
+                  <Typography variant='caption' sx={{ opacity: 0.9 }}>
+                    Trợ lý học tập thông minh
+                  </Typography>
                 </Box>
-                
-                <IconButton 
-                  onClick={handleClose}
-                  sx={{ 
-                    color: 'white',
-                    bgcolor: 'rgba(255,255,255,0.15)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    width: 44,
-                    height: 44,
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      bgcolor: 'rgba(255,255,255,0.25)',
-                      transform: 'scale(1.05)'
-                    }
-                  }}
-                >
-                  <CloseIcon />
-                </IconButton>
               </Box>
+              
+              <IconButton onClick={handleClose} sx={{ color: 'white' }}>
+                <CloseIcon />
+              </IconButton>
             </Box>
 
-            {/* Messages Container - Enhanced */}
+            {/* Messages Container */}
             <Box
               sx={{
                 flex: 1,
                 overflowY: 'auto',
                 p: 2.5,
-                background: 'linear-gradient(to bottom, #f8fafc, #ffffff)',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 2.5,
-                '&::-webkit-scrollbar': {
-                  width: '6px'
-                },
-                '&::-webkit-scrollbar-track': {
-                  background: 'rgba(0,0,0,0.05)',
-                  borderRadius: '10px'
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                  borderRadius: '10px'
-                }
+                gap: 2.5
               }}
             >
-              {/* Suggestions - Enhanced */}
-              {messages.length === 0 && (
+              {/* Hiển thị thông tin board hiện tại nếu có */}
+              {currentActiveBoard && (
+                <Fade in={true}>
+                  <Box
+                    sx={{
+                      p: 2,
+                      background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.1), rgba(63, 81, 181, 0.1))',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(33, 150, 243, 0.3)',
+                      mb: 2
+                    }}
+                  >
+                    <Typography variant='body2' sx={{ color: '#1976d2', fontWeight: 600 }}>
+                      📋 Đang làm việc trên: {currentActiveBoard.title}
+                    </Typography>
+                    <Typography variant='caption' sx={{ color: '#1976d2', opacity: 0.8 }}>
+                      Hiện có {currentActiveBoard.columns?.length || 0} cột
+                    </Typography>
+                  </Box>
+                </Fade>
+              )}
+
+              {/* Suggestions - chỉ hiện khi có board hiện tại */}
+              {messages.length === 0 && currentActiveBoard && (
                 <Fade in={true} timeout={800}>
                   <Box sx={{ mb: 2 }}>
                     <Box sx={{ 
@@ -358,86 +483,46 @@ const ChatBot = () => {
                       mb: 3,
                       p: 2,
                       background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1))',
-                      borderRadius: '16px',
-                      border: '1px solid rgba(102, 126, 234, 0.2)'
+                      borderRadius: '16px'
                     }}>
-                      <Typography 
-                        variant='h6' 
-                        sx={{ 
-                          color: '#374151',
-                          fontWeight: 700,
-                          fontSize: '18px',
-                          mb: 1
-                        }}
-                      >
-                        ✨ Gợi ý câu hỏi dành cho bạn
+                      <Typography variant='h6' sx={{ color: '#374151', fontWeight: 700, mb: 1 }}>
+                        ✨ Mở rộng board của bạn
                       </Typography>
-                      <Typography 
-                        variant='body2' 
-                        sx={{ 
-                          color: '#6b7280',
-                          fontSize: '13px'
-                        }}
-                      >
-                        Chọn một câu hỏi để bắt đầu cuộc trò chuyện
+                      <Typography variant='body2' sx={{ color: '#6b7280' }}>
+                        Tôi sẽ giúp bạn thêm cột và nhiệm vụ mới vào board hiện tại
                       </Typography>
                     </Box>
                     
                     {academicSuggestions.map((category, categoryIndex) => (
-                      <Box key={categoryIndex} sx={{ mb: 3.5 }}>
+                      <Box key={categoryIndex} sx={{ mb: 3 }}>
                         <Box sx={{ 
                           display: 'flex', 
                           alignItems: 'center', 
                           gap: 1.5, 
                           mb: 2,
                           p: 1.5,
-                          background: category.requiresTopic 
-                            ? 'linear-gradient(135deg, rgba(234, 88, 12, 0.1), rgba(251, 146, 60, 0.1))'
-                            : 'linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(139, 92, 246, 0.1))',
-                          borderRadius: '12px',
-                          border: category.requiresTopic 
-                            ? '1px solid rgba(234, 88, 12, 0.2)'
-                            : '1px solid rgba(79, 70, 229, 0.2)'
+                          background: 'linear-gradient(135deg, rgba(234, 88, 12, 0.1), rgba(251, 146, 60, 0.1))',
+                          borderRadius: '12px'
                         }}>
-                          <Box sx={{
-                            p: 1,
-                            bgcolor: category.requiresTopic 
-                              ? 'rgba(234, 88, 12, 0.1)'
-                              : 'rgba(79, 70, 229, 0.1)',
-                            borderRadius: '8px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}>
-                            {category.icon}
-                          </Box>
-                          <Typography 
-                            variant='subtitle2' 
-                            sx={{ 
-                              fontWeight: 700,
-                              color: category.requiresTopic ? '#ea580c' : '#4f46e5',
-                              fontSize: '14px'
-                            }}
-                          >
+                          {category.icon}
+                          <Typography variant='subtitle2' sx={{ fontWeight: 700, color: '#ea580c' }}>
                             {category.category}
                           </Typography>
-                          {category.requiresTopic && (
-                            <Typography
-                              variant='caption'
-                              sx={{
-                                ml: 'auto',
-                                px: 1.5,
-                                py: 0.5,
-                                bgcolor: 'rgba(234, 88, 12, 0.1)',
-                                color: '#ea580c',
-                                borderRadius: '12px',
-                                fontSize: '10px',
-                                fontWeight: 600
-                              }}
-                            >
-                              ✏️ Cần nhập chủ đề
-                            </Typography>
-                          )}
+                          <Typography
+                            variant='caption'
+                            sx={{
+                              ml: 'auto',
+                              px: 1.5,
+                              py: 0.5,
+                              bgcolor: 'rgba(234, 88, 12, 0.1)',
+                              color: '#ea580c',
+                              borderRadius: '12px',
+                              fontSize: '10px',
+                              fontWeight: 600
+                            }}
+                          >
+                            ✏️ Cần nhập chủ đề
+                          </Typography>
                         </Box>
                         
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -445,7 +530,7 @@ const ChatBot = () => {
                             <Chip
                               key={questionIndex}
                               label={question}
-                              onClick={() => handleSuggestionClick(question, category.requiresTopic)}
+                              onClick={() => handleSuggestionClick(question)}
                               sx={{
                                 justifyContent: 'flex-start',
                                 height: 'auto',
@@ -453,42 +538,21 @@ const ChatBot = () => {
                                 px: 2,
                                 fontSize: '13px',
                                 cursor: 'pointer',
-                                bgcolor: category.requiresTopic 
-                                  ? 'rgba(255, 247, 237, 0.8)' 
-                                  : 'rgba(248, 250, 252, 0.8)',
-                                color: category.requiresTopic ? '#ea580c' : '#374151',
-                                border: category.requiresTopic 
-                                  ? '1px solid rgba(234, 88, 12, 0.3)' 
-                                  : '1px solid rgba(226, 232, 240, 0.8)',
+                                bgcolor: 'rgba(255, 247, 237, 0.8)',
+                                color: '#ea580c',
+                                border: '1px solid rgba(234, 88, 12, 0.3)',
                                 borderRadius: '14px',
-                                backdropFilter: 'blur(10px)',
-                                transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                                position: 'relative',
+                                transition: 'all 0.3s ease',
                                 '&:hover': {
-                                  bgcolor: category.requiresTopic 
-                                    ? 'rgba(255, 237, 213, 0.9)' 
-                                    : 'rgba(102, 126, 234, 0.1)',
-                                  borderColor: category.requiresTopic ? '#ea580c' : '#667eea',
-                                  transform: 'translateY(-2px) scale(1.02)',
-                                  boxShadow: category.requiresTopic 
-                                    ? '0 8px 25px rgba(234, 88, 12, 0.2)' 
-                                    : '0 8px 25px rgba(102, 126, 234, 0.2)',
-                                  color: category.requiresTopic ? '#c2410c' : '#4f46e5'
+                                  bgcolor: 'rgba(255, 237, 213, 0.9)',
+                                  transform: 'translateY(-2px)',
+                                  boxShadow: '0 8px 25px rgba(234, 88, 12, 0.2)'
                                 },
-                                '&::after': category.requiresTopic ? {
-                                  content: '"✏️"',
-                                  position: 'absolute',
-                                  right: '12px',
-                                  top: '50%',
-                                  transform: 'translateY(-50%)',
-                                  fontSize: '14px'
-                                } : {},
                                 '& .MuiChip-label': {
                                   whiteSpace: 'normal',
                                   textAlign: 'left',
                                   padding: 0,
-                                  fontWeight: 500,
-                                  paddingRight: category.requiresTopic ? '28px' : '0'
+                                  fontWeight: 500
                                 }
                               }}
                             />
@@ -500,7 +564,29 @@ const ChatBot = () => {
                 </Fade>
               )}
 
-              {/* Messages - Enhanced */}
+              {/* Thông báo nếu không có board hiện tại */}
+              {messages.length === 0 && !currentActiveBoard && (
+                <Fade in={true}>
+                  <Box
+                    sx={{
+                      textAlign: 'center',
+                      p: 3,
+                      background: 'linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 152, 0, 0.1))',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(255, 193, 7, 0.3)'
+                    }}
+                  >
+                    <Typography variant='h6' sx={{ color: '#f57c00', fontWeight: 700, mb: 1 }}>
+                      📋 Chưa có board nào
+                    </Typography>
+                    <Typography variant='body2' sx={{ color: '#ff8f00' }}>
+                      Vui lòng mở một board để tôi có thể giúp bạn thêm cột và nhiệm vụ mới
+                    </Typography>
+                  </Box>
+                </Fade>
+              )}
+
+              {/* Messages */}
               {messages.map((message) => (
                 <Fade in={true} key={message.id} timeout={400}>
                   <Box
@@ -520,71 +606,30 @@ const ChatBot = () => {
                         background: message.isBot 
                           ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                           : 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                        flexShrink: 0,
-                        boxShadow: message.isBot 
-                          ? '0 4px 12px rgba(102, 126, 234, 0.3)'
-                          : '0 4px 12px rgba(240, 147, 251, 0.3)',
-                        border: '2px solid rgba(255, 255, 255, 0.8)'
+                        flexShrink: 0
                       }}
                     >
-                      {message.isBot ? 
-                        <SmartToyIcon sx={{ fontSize: 20 }} /> : 
-                        <PersonIcon sx={{ fontSize: 20 }} />
-                      }
+                      {message.isBot ? <SmartToyIcon sx={{ fontSize: 20 }} /> : <PersonIcon sx={{ fontSize: 20 }} />}
                     </Avatar>
                     
                     <Box
                       sx={{
                         background: message.isBot 
-                          ? 'linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,250,252,0.9))'
+                          ? 'rgba(255,255,255,0.9)'
                           : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                         color: message.isBot ? '#1f2937' : 'white',
                         borderRadius: '20px',
                         px: 3,
                         py: 2,
-                        boxShadow: message.isBot 
-                          ? '0 4px 20px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8)'
-                          : '0 6px 20px rgba(102, 126, 234, 0.4)',
-                        border: message.isBot ? '1px solid rgba(226, 232, 240, 0.6)' : 'none',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
                         maxWidth: '100%',
-                        wordWrap: 'break-word',
-                        backdropFilter: 'blur(15px)',
-                        position: 'relative',
-                        '&::before': message.isBot ? {
-                          content: '""',
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          background: 'linear-gradient(135deg, rgba(255,255,255,0.1), transparent)',
-                          borderRadius: '20px',
-                          pointerEvents: 'none'
-                        } : {}
+                        wordWrap: 'break-word'
                       }}
                     >
-                      <Typography 
-                        variant='body2' 
-                        sx={{ 
-                          whiteSpace: 'pre-wrap',
-                          lineHeight: 1.6,
-                          fontSize: '14px',
-                          fontWeight: 500
-                        }}
-                      >
+                      <Typography variant='body2' sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
                         {message.text}
                       </Typography>
-                      <Typography 
-                        variant='caption' 
-                        sx={{
-                          display: 'block',
-                          mt: 1.5,
-                          textAlign: message.isBot ? 'left' : 'right',
-                          opacity: 0.7,
-                          fontSize: '11px',
-                          fontWeight: 500
-                        }}
-                      >
+                      <Typography variant='caption' sx={{ display: 'block', mt: 1, opacity: 0.7 }}>
                         {new Date(message.timestamp).toLocaleTimeString()}
                       </Typography>
                     </Box>
@@ -592,61 +637,93 @@ const ChatBot = () => {
                 </Fade>
               ))}
               
-              {/* Loading indicator - Enhanced */}
+              {/* Column Creation Suggestion - thay đổi từ Board Creation */}
+              {showColumnCreation && columnCreationData && currentActiveBoard && (
+                <Fade in={true}>
+                  <Box
+                    sx={{
+                      p: 3,
+                      background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(139, 195, 74, 0.1))',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(76, 175, 80, 0.3)',
+                      mt: 2
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                      <ViewColumnIcon sx={{ color: '#4caf50', fontSize: 24 }} />
+                      <Typography variant='h6' sx={{ color: '#2e7d32', fontWeight: 700 }}>
+                        Thêm Cột Mới Vào Board
+                      </Typography>
+                    </Box>
+                    
+                    <Typography variant='body2' sx={{ color: '#388e3c', mb: 2 }}>
+                      Tôi có thể thêm {columnCreationData.length} cột mới vào board {currentActiveBoard.title}:
+                    </Typography>
+                    
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+                      {columnCreationData.map((col, index) => (
+                        <Chip
+                          key={index}
+                          label={`${col.title} (${col.cards.length} nhiệm vụ)`}
+                          sx={{
+                            bgcolor: col.color,
+                            color: 'white',
+                            fontWeight: 600,
+                            fontSize: '12px'
+                          }}
+                        />
+                      ))}
+                    </Box>
+                    
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <Button
+                        variant="contained"
+                        onClick={handleAddColumnsToBoard}
+                        disabled={isCreatingBoard}
+                        startIcon={isCreatingBoard ? null : <AddIcon />}
+                        sx={{
+                          background: 'linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)',
+                          color: 'white',
+                          fontWeight: 600,
+                          borderRadius: '12px',
+                          textTransform: 'none',
+                          flex: 1,
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #388e3c 0%, #4caf50 100%)'
+                          }
+                        }}
+                      >
+                        {isCreatingBoard ? 'Đang thêm...' : '🚀 Thêm Cột Ngay'}
+                      </Button>
+                      
+                      <Button
+                        variant="outlined"
+                        onClick={() => setShowColumnCreation(false)}
+                        sx={{
+                          borderColor: '#4caf50',
+                          color: '#4caf50',
+                          borderRadius: '12px',
+                          textTransform: 'none'
+                        }}
+                      >
+                        Bỏ qua
+                      </Button>
+                    </Box>
+                  </Box>
+                </Fade>
+              )}
+              
+              {/* Loading indicator */}
               {isLoading && (
                 <Fade in={true}>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, maxWidth: '85%' }}>
-                    <Avatar
-                      sx={{
-                        width: 36,
-                        height: 36,
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
-                        border: '2px solid rgba(255, 255, 255, 0.8)'
-                      }}
-                    >
-                      <SmartToyIcon sx={{ fontSize: 20 }} />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Avatar sx={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+                      <SmartToyIcon />
                     </Avatar>
-                    <Box
-                      sx={{
-                        background: 'linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,250,252,0.9))',
-                        borderRadius: '20px',
-                        px: 3,
-                        py: 2.5,
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8)',
-                        border: '1px solid rgba(226, 232, 240, 0.6)',
-                        backdropFilter: 'blur(15px)'
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                        <Box 
-                          sx={{ 
-                            width: '8px', 
-                            height: '8px', 
-                            bgcolor: '#667eea', 
-                            borderRadius: '50%',
-                            animation: 'bounce 1.4s ease-in-out infinite both'
-                          }} 
-                        />
-                        <Box 
-                          sx={{ 
-                            width: '8px', 
-                            height: '8px', 
-                            bgcolor: '#764ba2', 
-                            borderRadius: '50%',
-                            animation: 'bounce 1.4s ease-in-out 0.16s infinite both'
-                          }} 
-                        />
-                        <Box 
-                          sx={{ 
-                            width: '8px', 
-                            height: '8px', 
-                            bgcolor: '#667eea', 
-                            borderRadius: '50%',
-                            animation: 'bounce 1.4s ease-in-out 0.32s infinite both'
-                          }} 
-                        />
-                      </Box>
+                    <Box sx={{ bgcolor: 'rgba(255,255,255,0.9)', borderRadius: '20px', px: 3, py: 2 }}>
+                      <Typography variant='body2' sx={{ color: '#667eea' }}>
+                        Đang suy nghĩ... 🤔
+                      </Typography>
                     </Box>
                   </Box>
                 </Fade>
@@ -655,42 +732,20 @@ const ChatBot = () => {
               <div ref={messagesEndRef} />
             </Box>
 
-            {/* Input Area - Enhanced */}
-            <Box
-              sx={{
-                p: 3,
-                borderTop: '1px solid rgba(241, 245, 249, 0.8)',
-                background: 'linear-gradient(135deg, rgba(255,255,255,0.95), rgba(248,250,252,0.95))',
-                backdropFilter: 'blur(20px)'
-              }}
-            >
+            {/* Input Area */}
+            <Box sx={{ p: 3, borderTop: '1px solid rgba(241, 245, 249, 0.8)' }}>
               {/* Topic Input Section */}
               {showTopicInput && (
                 <Fade in={showTopicInput}>
                   <Box sx={{ mb: 3 }}>
                     <Box sx={{
-                      p: 2.5,
+                      p: 2,
                       background: 'linear-gradient(135deg, rgba(255, 247, 237, 0.9), rgba(254, 243, 199, 0.9))',
-                      borderRadius: '16px',
-                      border: '1px solid rgba(234, 88, 12, 0.3)',
+                      borderRadius: '12px',
                       mb: 2
                     }}>
-                      <Typography variant='subtitle2' sx={{ 
-                        color: '#ea580c', 
-                        fontWeight: 600,
-                        mb: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1
-                      }}>
+                      <Typography variant='subtitle2' sx={{ color: '#ea580c', fontWeight: 600, mb: 1 }}>
                         ✏️ Nhập chủ đề nhóm của bạn
-                      </Typography>
-                      <Typography variant='body2' sx={{ 
-                        color: '#c2410c',
-                        fontSize: '12px',
-                        opacity: 0.9
-                      }}>
-                        Vui lòng nhập tên chủ đề mà nhóm bạn đã chọn để được tư vấn cụ thể
                       </Typography>
                     </Box>
                     <TextField
@@ -705,80 +760,23 @@ const ChatBot = () => {
                       sx={{
                         '& .MuiOutlinedInput-root': {
                           borderRadius: '12px',
-                          bgcolor: 'rgba(255, 255, 255, 0.8)',
-                          backdropFilter: 'blur(10px)',
-                          border: '1px solid rgba(234, 88, 12, 0.3)',
-                          transition: 'all 0.3s ease',
-                          fontSize: '14px',
-                          '&:hover': {
-                            borderColor: '#ea580c',
-                            bgcolor: 'rgba(255, 255, 255, 0.9)'
-                          },
-                          '&.Mui-focused': {
-                            borderColor: '#ea580c',
-                            bgcolor: 'rgba(255, 255, 255, 1)',
-                            boxShadow: '0 0 0 3px rgba(234, 88, 12, 0.1)'
-                          }
-                        },
-                        '& .MuiOutlinedInput-input': {
-                          color: '#1f2937',
-                          fontWeight: 500,
-                          '&::placeholder': {
-                            color: '#9ca3af',
-                            opacity: 0.8
-                          }
+                          bgcolor: 'rgba(255, 255, 255, 0.9)'
                         }
                       }}
                     />
                     
                     <Box sx={{ display: 'flex', gap: 1.5, mt: 2 }}>
-                      <Button
-                        variant="outlined"
-                        onClick={handleCancelTopic}
-                        sx={{
-                          borderRadius: '10px',
-                          textTransform: 'none',
-                          fontWeight: 600,
-                          fontSize: '13px',
-                          px: 2.5,
-                          py: 1,
-                          borderColor: '#d1d5db',
-                          color: '#6b7280',
-                          '&:hover': {
-                            borderColor: '#9ca3af',
-                            bgcolor: 'rgba(156, 163, 175, 0.1)'
-                          }
-                        }}
-                      >
-                        ❌ Hủy
+                      <Button variant="outlined" onClick={handleCancelTopic} sx={{ borderRadius: '10px' }}>
+                        Hủy
                       </Button>
-                      
                       <Button
                         variant="contained"
                         onClick={handleTopicSubmit}
                         disabled={userTopic.trim() === ''}
                         sx={{
                           borderRadius: '10px',
-                          textTransform: 'none',
-                          fontWeight: 600,
-                          fontSize: '13px',
-                          px: 2.5,
-                          py: 1,
                           background: 'linear-gradient(135deg, #ea580c 0%, #dc2626 100%)',
-                          color: 'white',
-                          flexGrow: 1,
-                          boxShadow: '0 4px 12px rgba(234, 88, 12, 0.3)',
-                          transition: 'all 0.3s ease',
-                          '&:hover': {
-                            background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-                            boxShadow: '0 6px 16px rgba(234, 88, 12, 0.4)',
-                            transform: 'translateY(-1px)'
-                          },
-                          '&:disabled': {
-                            background: 'linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%)',
-                            color: '#6b7280',
-                            boxShadow: 'none'
-                          }
+                          flex: 1
                         }}
                       >
                         ✨ Gửi câu hỏi
@@ -803,31 +801,7 @@ const ChatBot = () => {
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '18px',
-                      bgcolor: showTopicInput ? 'rgba(243, 244, 246, 0.5)' : 'rgba(255, 255, 255, 0.9)',
-                      backdropFilter: 'blur(15px)',
-                      border: showTopicInput ? '1px solid rgba(209, 213, 219, 0.5)' : '1px solid rgba(226, 232, 240, 0.8)',
-                      transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                      fontSize: '14px',
-                      '&:hover': !showTopicInput ? {
-                        borderColor: '#667eea',
-                        bgcolor: 'rgba(255, 255, 255, 1)',
-                        transform: 'translateY(-1px)',
-                        boxShadow: '0 8px 25px rgba(102, 126, 234, 0.15)'
-                      } : {},
-                      '&.Mui-focused': !showTopicInput ? {
-                        borderColor: '#667eea',
-                        bgcolor: 'rgba(255, 255, 255, 1)',
-                        boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.1), 0 8px 25px rgba(102, 126, 234, 0.15)'
-                      } : {}
-                    },
-                    '& .MuiOutlinedInput-input': {
-                      color: showTopicInput ? '#9ca3af' : '#1f2937',
-                      fontWeight: 500,
-                      py: 1.5,
-                      '&::placeholder': {
-                        color: showTopicInput ? '#d1d5db' : '#9ca3af',
-                        opacity: 0.8
-                      }
+                      bgcolor: 'rgba(255, 255, 255, 0.9)'
                     }
                   }}
                 />
@@ -839,79 +813,20 @@ const ChatBot = () => {
                     width: 48,
                     height: 48,
                     borderRadius: '14px',
-                    background: showTopicInput ? 'linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                     color: 'white',
-                    flexShrink: 0,
-                    boxShadow: showTopicInput ? 'none' : '0 6px 20px rgba(102, 126, 234, 0.4)',
-                    transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                    border: '2px solid rgba(255, 255, 255, 0.8)',
-                    '&:hover': !showTopicInput ? {
-                      background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                      transform: 'scale(1.05)',
-                      boxShadow: '0 8px 25px rgba(102, 126, 234, 0.5)'
-                    } : {},
-                    '&:disabled': {
-                      background: 'linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%)',
-                      color: '#9ca3af',
-                      boxShadow: 'none'
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)'
                     }
                   }}
                 >
-                  <SendIcon sx={{ fontSize: 20 }} />
+                  <SendIcon />
                 </IconButton>
               </Box>
-              
-              {/* Quick tip */}
-              <Typography 
-                variant='caption' 
-                sx={{ 
-                  color: '#9ca3af',
-                  fontSize: '11px',
-                  mt: 1.5,
-                  display: 'block',
-                  textAlign: 'center',
-                  fontWeight: 500
-                }}
-              >
-                💡 Nhấn Enter để gửi, Shift + Enter để xuống dòng
-              </Typography>
             </Box>
           </Paper>
         </Slide>
       )}
-
-      {/* Custom CSS for animations */}
-      <style jsx>{`
-        @keyframes glow {
-          0% { box-shadow: 0 12px 35px rgba(102, 126, 234, 0.4), 0 0 0 0 rgba(102, 126, 234, 0.7); }
-          100% { box-shadow: 0 15px 40px rgba(118, 75, 162, 0.5), 0 0 20px rgba(118, 75, 162, 0.3); }
-        }
-        
-        @keyframes heartbeat {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.1); }
-        }
-        
-        @keyframes rotate {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-10px) rotate(5deg); }
-        }
-        
-        @keyframes pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.7; transform: scale(0.95); }
-        }
-        
-        @keyframes bounce {
-          0%, 80%, 100% { transform: scale(0); }
-          40% { transform: scale(1); }
-        }
-      `}</style>
     </>
   )
 }

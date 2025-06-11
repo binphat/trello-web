@@ -1,5 +1,4 @@
-// evaluationSubmissionAPI.js - Improved version with better token handling
-
+// detailedEvaluationResultsAPI.js - API functions cho RatingTab
 import axios from 'axios'
 import { API_ROOT } from '~/utils/constants'
 
@@ -101,8 +100,8 @@ const handleAuthError = (error) => {
   throw error
 }
 
-// Enhanced API functions
-export const getAllMyEvaluationResultsAPI = async (userId = null, token = null) => {
+// 🆕 API function chính để lấy kết quả đánh giá chi tiết
+export const getDetailedEvaluationResultsAPI = async (token = null) => {
   try {
     const authToken = token || getTokenFromMultipleSources()
     
@@ -114,24 +113,27 @@ export const getAllMyEvaluationResultsAPI = async (userId = null, token = null) 
       throw new Error('Token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.')
     }
     
+    console.log('🔄 Fetching detailed evaluation results...')
     console.log('🔑 Using token:', authToken.substring(0, 20) + '...')
     
-    const params = userId ? { userId } : {}
-    
-    const response = await axios.get(`${API_ROOT}/v1/evaluations/my-results/all`, {
-      params,
+    const response = await axios.get(`${API_ROOT}/v1/evaluations/my-results/detailed`, {
       headers: {
         'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json'
       },
       withCredentials: true,
-      timeout: 10000 // 10 second timeout
+      timeout: 15000 // 15 second timeout
     })
     
-    console.log('✅ API Response:', response.data)
-    return response.data
+    console.log('✅ Detailed API Response:', response.data)
+    
+    if (response.data && response.data.success) {
+      return response.data.data
+    }
+    
+    throw new Error(response.data?.message || 'Không thể lấy kết quả đánh giá chi tiết')
   } catch (err) {
-    console.error('❌ Get my evaluation results API Error:', err)
+    console.error('❌ Get detailed evaluation results API Error:', err)
     
     if (err.response?.status === 401) {
       handleAuthError(err)
@@ -141,7 +143,8 @@ export const getAllMyEvaluationResultsAPI = async (userId = null, token = null) 
   }
 }
 
-export const submitSingleEvaluationAPI = async (evaluationData, token = null) => {
+// 🆕 API function để lấy kết quả của một board cụ thể
+export const getBoardDetailedResultsAPI = async (boardId, token = null) => {
   try {
     const authToken = token || getTokenFromMultipleSources()
     
@@ -152,43 +155,24 @@ export const submitSingleEvaluationAPI = async (evaluationData, token = null) =>
     if (!validateToken(authToken)) {
       throw new Error('Token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.')
     }
-
-    console.log('🚀 Submitting evaluation with token:', authToken.substring(0, 20) + '...')
-
-    const response = await axios.post(
-      `${API_ROOT}/v1/evaluations`,
-      {
-        board: evaluationData.boardId,
-        evaluatedUser: evaluationData.evaluatedUserId,
-        evaluator: evaluationData.evaluatorId,
-        ratings: Object.entries(evaluationData.ratings).map(([id, score]) => ({
-          criterion: id,
-          score
-        }))
+    
+    console.log('🔄 Fetching board detailed results for:', boardId)
+    
+    const response = await axios.get(`${API_ROOT}/v1/evaluations/my-results/detailed`, {
+      params: { boardId },
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
       },
-      {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        },
-        withCredentials: true,
-        timeout: 15000 // 15 second timeout
-      }
-    )
-
-    console.log('✅ Submit response:', response.data)
-
-    if (response.data && (response.data._id || response.data.success)) {
-      return response.data
-    }
-    throw new Error(response.data?.message || 'Đánh giá không thành công')
-  } catch (err) {
-    console.error('❌ Submit evaluation API Error:', {
-      status: err.response?.status,
-      data: err.response?.data,
-      message: err.message
+      withCredentials: true,
+      timeout: 10000
     })
     
+    console.log('✅ Board detailed API Response:', response.data)
+    return response.data.data
+  } catch (err) {
+    console.error('❌ Get board detailed results API Error:', err)
+    
     if (err.response?.status === 401) {
       handleAuthError(err)
     }
@@ -197,7 +181,8 @@ export const submitSingleEvaluationAPI = async (evaluationData, token = null) =>
   }
 }
 
-export const getMyEvaluationsAPI = async (boardId = null, token = null) => {
+// 🆕 API function để export kết quả đánh giá
+export const exportEvaluationResultsAPI = async (boardId = null, format = 'excel', token = null) => {
   try {
     const authToken = token || getTokenFromMultipleSources()
     
@@ -209,22 +194,48 @@ export const getMyEvaluationsAPI = async (boardId = null, token = null) => {
       throw new Error('Token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.')
     }
     
-    const params = boardId ? { boardId } : {}
-    const response = await axios.get(
-      `${API_ROOT}/v1/evaluations`,
-      {
-        params,
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        },
-        withCredentials: true,
-        timeout: 10000
+    console.log('🔄 Exporting evaluation results...')
+    
+    const params = { format }
+    if (boardId) params.boardId = boardId
+    
+    const response = await axios.get(`${API_ROOT}/v1/evaluations/export`, {
+      params,
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      },
+      responseType: 'blob', // Quan trọng cho file download
+      withCredentials: true,
+      timeout: 30000 // 30 second timeout cho export
+    })
+    
+    // Tạo URL để download file
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    
+    // Lấy filename từ response header hoặc tạo default
+    const contentDisposition = response.headers['content-disposition']
+    let filename = 'evaluation-results.xlsx'
+    
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="(.+)"/)
+      if (filenameMatch) {
+        filename = filenameMatch[1]
       }
-    )
-    return response.data
+    }
+    
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+    
+    console.log('✅ Successfully exported evaluation results')
+    return { success: true, filename }
   } catch (err) {
-    console.error('❌ Get evaluations API Error:', err)
+    console.error('❌ Export evaluation results API Error:', err)
     
     if (err.response?.status === 401) {
       handleAuthError(err)
@@ -234,7 +245,8 @@ export const getMyEvaluationsAPI = async (boardId = null, token = null) => {
   }
 }
 
-export const getMyEvaluationResultsAPI = async (boardId, userId, token = null) => {
+// 🆕 API function để lấy thống kê chi tiết
+export const getEvaluationStatisticsAPI = async (timeRange = '3months', token = null) => {
   try {
     const authToken = token || getTokenFromMultipleSources()
     
@@ -246,21 +258,22 @@ export const getMyEvaluationResultsAPI = async (boardId, userId, token = null) =
       throw new Error('Token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.')
     }
     
-    const response = await axios.get(
-      `${API_ROOT}/v1/evaluations/my-results`,
-      {
-        params: { boardId, userId },
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        },
-        withCredentials: true,
-        timeout: 10000
-      }
-    )
-    return response.data
+    console.log('🔄 Fetching evaluation statistics...')
+    
+    const response = await axios.get(`${API_ROOT}/v1/evaluations/statistics`, {
+      params: { timeRange },
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      },
+      withCredentials: true,
+      timeout: 10000
+    })
+    
+    console.log('✅ Statistics API Response:', response.data)
+    return response.data.data
   } catch (err) {
-    console.error('❌ Get my evaluation results API Error:', err)
+    console.error('❌ Get evaluation statistics API Error:', err)
     
     if (err.response?.status === 401) {
       handleAuthError(err)
@@ -270,11 +283,11 @@ export const getMyEvaluationResultsAPI = async (boardId, userId, token = null) =
   }
 }
 
-// Utility function để test token
-export const testTokenAPI = async (token = null) => {
+// Utility function để test API
+export const testDetailedEvaluationAPI = async (token = null) => {
   try {
     const authToken = token || getTokenFromMultipleSources()
-    console.log('🧪 Testing token:', authToken ? 'Token found' : 'No token')
+    console.log('🧪 Testing detailed evaluation API...')
     
     if (!authToken) {
       return { valid: false, error: 'No token found' }
@@ -284,8 +297,8 @@ export const testTokenAPI = async (token = null) => {
       return { valid: false, error: 'Token invalid or expired' }
     }
 
-    // Test với một API endpoint đơn giản
-    const response = await axios.get(`${API_ROOT}/v1/user/profile`, {
+    // Test với detailed evaluation endpoint
+    const response = await axios.get(`${API_ROOT}/v1/evaluations/my-results/detailed`, {
       headers: {
         'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json'
@@ -296,7 +309,7 @@ export const testTokenAPI = async (token = null) => {
 
     return { valid: true, data: response.data }
   } catch (err) {
-    console.error('❌ Token test failed:', err)
+    console.error('❌ Detailed evaluation API test failed:', err)
     return { valid: false, error: err.message }
   }
 }

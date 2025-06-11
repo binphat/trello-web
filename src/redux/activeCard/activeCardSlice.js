@@ -1,10 +1,29 @@
 import { createSlice } from '@reduxjs/toolkit'
 import { callApiUpdateCard } from '~/redux/activeBoard/activeBoardSlice'
+import { deleteCardAPI } from '~/apis'
+import { createAsyncThunk } from '@reduxjs/toolkit'
 // Khởi tạo giá trị của một Slice trong redux
 const initialState = {
   currentActiveCard: null,
   isShowModalActiveCard: false
 }
+// 8. Thêm action deleteCard vào activeCardSlice.js
+export const deleteCard = createAsyncThunk(
+  'activeCard/deleteCard',
+  async (cardId, { dispatch, rejectWithValue }) => {
+    try {
+      // Gọi API xóa card từ activeBoardSlice
+      const result = await dispatch(deleteCardAPI(cardId)).unwrap()
+      
+      // Đóng modal sau khi xóa thành công
+      dispatch(cleaAndHideCurrentActiveCard())
+      
+      return result
+    } catch (error) {
+      return rejectWithValue(error)
+    }
+  }
+)
 
 // Khởi tạo một slice trong kho lưu trữ - redux store
 export const activeCardSlice = createSlice({
@@ -32,11 +51,16 @@ export const activeCardSlice = createSlice({
     }
   },
   extraReducers: (builder) => {
-    builder.addCase(callApiUpdateCard.fulfilled, (state, action)=> {
+    builder.addCase(callApiUpdateCard.fulfilled, (state, action) => {
       // Cập nhật luôn activeCard khi API update thành công
       state.currentActiveCard = action.payload
-    }
-    )
+    })
+    // 9. Thêm vào extraReducers trong activeCardSlice.js
+      .addCase(deleteCard.fulfilled, (state) => {
+        // Card đã được xóa, clear active card
+        state.currentActiveCard = null
+        state.isShowModalActiveCard = false
+      })
   }
 })
 

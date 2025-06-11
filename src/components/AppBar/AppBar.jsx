@@ -23,6 +23,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import { Link, useNavigate } from 'react-router-dom'
 import Notifications from './Notifications/Notifications'
 import AutoCompleteSearchBoard from './SearchBoards/AutoCompleteSearchBoard'
+import CardCounter from './CardCounter/CardCounter' // Import component mới
 
 // Import thêm các components cho Modal
 import Modal from '@mui/material/Modal'
@@ -117,19 +118,18 @@ function AppBar() {
               }}>
                 Tạo bảng
             </Button>
+            {/* Component đếm card - thêm mới */}
+            <CardCounter />
           </Box>
         </Box>
-        
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           {/* Tìm kiếm nhanh 1 hoặc nhiều board */}
           <AutoCompleteSearchBoard />
+
           {/* Xử lý dark/light mode */}
           <ModeSelect />
           {/* Xử lý thông báo */}
           <Notifications />
-          <Tooltip title="Help">
-            <HelpOutlineIcon sx={{ cursor: 'pointer', color: 'white' }} />
-          </Tooltip>
           <Profile />
         </Box>
       </Box>
@@ -167,12 +167,10 @@ function AppBar() {
               onClick={handleCloseModal} 
             />
           </Box>
-          
           <Box id="create-board-modal-title" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <LibraryAddIcon />
             <Typography variant="h6" component="h2">Tạo một bảng mới</Typography>
           </Box>
-          
           <Box id="create-board-modal-description" sx={{ my: 2 }}>
             <form onSubmit={handleSubmit(submitCreateNewBoard)}>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

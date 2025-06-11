@@ -13,6 +13,7 @@ import explainAIReducer from '~/redux/ExplainAI/explainAISlice'
 import spellCheckReducer from '~/redux/spellCheck/spellCheckSlice' // 👈 Import spellCheck reducer
 import evaluationSubmissionReducer from '~/redux/activeEvaluationSubmission/evaluationSubmissionSlice'
 import myEvaluationResultsSlice from '~/redux/activeEvaluationSubmission/myEvaluationResultsSlice' // 👈 Thêm import mới
+import detailedEvaluationResultsReducer from '~/redux/activeEvaluationSubmission/detailedEvaluationResultsSlice'
 const rootPersistConfig = {
   key: 'root',
   storage,
@@ -30,6 +31,7 @@ const reducers = combineReducers({
   evaluationSubmission: evaluationSubmissionReducer,
   spellCheck: spellCheckReducer,// 👈 Thêm spellCheck reducer
   myEvaluationResults: myEvaluationResultsSlice, // 👈 Thêm reducer mới
+  detailedEvaluationResults: detailedEvaluationResultsReducer
 })
 
 const persistedReducers = persistReducer(rootPersistConfig, reducers)

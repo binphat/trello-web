@@ -16,7 +16,7 @@ const createStorageHelper = (storage) => ({
     }
     return null
   },
-  
+
   set: (key, value) => {
     try {
       if (typeof window !== 'undefined' && storage && value !== null && value !== undefined) {
@@ -28,7 +28,7 @@ const createStorageHelper = (storage) => ({
     }
     return false
   },
-  
+
   remove: (key) => {
     try {
       if (typeof window !== 'undefined' && storage) {
@@ -70,13 +70,13 @@ const getInitialUserState = () => {
   // Try to get from localStorage first
   let currentUser = localStorage.getJSON('currentUser')
   let token = localStorage.get('token')
-  
+
   // Fallback to sessionStorage if localStorage fails (private mode)
   if (!currentUser || !token) {
     currentUser = sessionStorage.getJSON('currentUser') || null
     token = sessionStorage.get('token') || null
   }
-  
+
   return { currentUser, token }
 }
 
@@ -88,7 +88,6 @@ export const loginUserAPI = createAsyncThunk(
   'user/loginUserAPI',
   async (data) => {
     const response = await authorizedAxiosInstance.post(`${API_ROOT}/v1/users/login`, data)
-    console.log('Login Response:', response.data)
     return response.data
   }
 )
@@ -96,7 +95,18 @@ export const loginUserAPI = createAsyncThunk(
 export const updateUserAPI = createAsyncThunk(
   'user/updateUserAPI',
   async (data) => {
-    const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/users/update`, data)
+    let config = {}
+    let payload
+
+    // Nếu là FormData, tức là có upload file
+    if (data instanceof FormData) {
+      payload = data
+      config = { headers: { 'Content-Type': 'multipart/form-data' } }
+    } else {
+      payload = data
+    }
+
+    const response = await authorizedAxiosInstance.put(`${API_ROOT}/v1/users/update`, payload, config)
     return response.data
   }
 )
@@ -116,15 +126,11 @@ export const logoutUserAPI = createAsyncThunk(
 const persistUserData = (userInfo, token) => {
   // Try localStorage first
   const localStorageSuccess = localStorage.setJSON('currentUser', userInfo) && localStorage.set('token', token)
-  
+
   // Always save to sessionStorage as backup
   sessionStorage.setJSON('currentUser', userInfo)
   sessionStorage.set('token', token)
-  
-  console.log('💾 User data persisted:', {
-    localStorage: localStorageSuccess,
-    sessionStorage: true
-  })
+
 }
 
 // ✅ Helper to clear user data from storage
@@ -133,7 +139,6 @@ const clearUserData = () => {
   localStorage.remove('token')
   sessionStorage.remove('currentUser')
   sessionStorage.remove('token')
-  console.log('🗑️ User data cleared from storage')
 }
 
 // Khởi tạo một cai Slice trong kho lưu trữ - Redux Store
@@ -144,38 +149,33 @@ export const userSlice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(loginUserAPI.fulfilled, (state, action) => {
       const userData = action.payload
-      
+
       // Tách token ra khỏi userData
       const { accessToken, refreshToken, ...userInfo } = userData
-      
+
       // Cập nhật state
       state.currentUser = userInfo
       state.token = accessToken
-      
+
       // ✅ Persist to storage
       persistUserData(userInfo, accessToken)
-      
-      console.log('✅ Login successful - User stored:', userInfo)
-      console.log('✅ Token stored:', accessToken.substring(0, 20) + '...')
     })
-    .addCase(loginUserAPI.rejected, (state, action) => {
-      state.currentUser = null
-      state.token = null
-      clearUserData()
-      console.error('❌ Login failed:', action.error)
-    })
-    .addCase(logoutUserAPI.fulfilled, (state) => {
-      state.currentUser = null
-      state.token = null
-      clearUserData()
-    })
-    .addCase(updateUserAPI.fulfilled, (state, action) => {
-      const user = action.payload
-      state.currentUser = user
-      
-      // ✅ Update persisted user data
-      persistUserData(user, state.token)
-    })
+      .addCase(loginUserAPI.rejected, (state, action) => {
+        state.currentUser = null
+        state.token = null
+        clearUserData()
+      })
+      .addCase(logoutUserAPI.fulfilled, (state) => {
+        state.currentUser = null
+        state.token = null
+        clearUserData()
+      })
+      .addCase(updateUserAPI.fulfilled, (state, action) => {
+        const updatedUser = action.payload
+        console.log('🚀 ~ .addCase ~ updatedUser:', updatedUser)
+        state.currentUser = { ...state.currentUser, ...updatedUser }
+        persistUserData(state.currentUser, state.token)
+      })
   }
 })
 

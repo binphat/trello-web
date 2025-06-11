@@ -11,12 +11,12 @@ const BOARD_TEMPLATES = {
     title: 'Kanban Board',
     description: 'Basic Kanban workflow',
     columns: [
-      { 
+      {
         title: 'To Do',
         color: '#ff6b6b',
         sampleCards: ['Topic 1', 'Topic 2', 'Topic 3']
       },
-      { 
+      {
         title: 'Doing',
         color: '#4ecdc4',
         sampleCards: ['Topic 1', 'Topic 2', 'Topic 3']
@@ -32,30 +32,30 @@ const BOARD_TEMPLATES = {
     title: 'Big Topic Board',
     description: 'Organize tasks by themes',
     columns: [
-      { 
-        title: 'Big Topic 1', 
+      {
+        title: 'Big Topic 1',
         color: '#96ceb4',
-        sampleCards: ['Small Topic','Small Topic','Small Topic']
+        sampleCards: ['Small Topic', 'Small Topic', 'Small Topic']
       },
-      { 
-        title: 'Big Topic 2', 
+      {
+        title: 'Big Topic 2',
         color: '#ffd93d',
-        sampleCards: ['Small Topic','Small Topic','Small Topic']
+        sampleCards: ['Small Topic', 'Small Topic', 'Small Topic']
       },
-      { 
-        title: 'Big Topic 3', 
+      {
+        title: 'Big Topic 3',
         color: '#6c5ce7',
-        sampleCards: ['Small Topic','Small Topic','Small Topic']
+        sampleCards: ['Small Topic', 'Small Topic', 'Small Topic']
       },
-      { 
-        title: 'Big Topic 4', 
+      {
+        title: 'Big Topic 4',
         color: '#fd79a8',
-        sampleCards: ['Small Topic','Small Topic','Small Topic']
+        sampleCards: ['Small Topic', 'Small Topic', 'Small Topic']
       },
-      { 
-        title: 'Big Topic 5', 
+      {
+        title: 'Big Topic 5',
         color: '#00b894',
-        sampleCards: ['Small Topic','Small Topic','Small Topic']
+        sampleCards: ['Small Topic', 'Small Topic', 'Small Topic']
       }
     ]
   }
@@ -77,17 +77,117 @@ const filterCardsForUser = (cards, userId, showMyCardsOnly) => {
   if (!showMyCardsOnly || !userId) {
     return cards
   }
-  
+
   return cards.filter(card => {
     // Kiểm tra xem user có được assign vào card này không
     // Giả sử card có property memberIds hoặc assignedUsers
-    return card.memberIds?.includes(userId) || 
+    return card.memberIds?.includes(userId) ||
            card.assignedUsers?.some(user => user._id === userId) ||
            card.members?.some(user => user._id === userId)
   })
 }
+// Thêm async thunk mới để tạo columns và cards trong board hiện tại
+export const addColumnsToCurrentBoard = createAsyncThunk(
+  'activeBoard/addColumnsToCurrentBoard',
+  async ({ columnsData }, { getState, rejectWithValue }) => {
+    try {
+      const state = getState()
+      const currentBoard = state.activeBoard.currentActiveBoard
 
+      if (!currentBoard || !currentBoard._id) {
+        throw new Error('Không có board hiện tại để thêm columns')
+      }
+
+      const boardId = currentBoard._id
+      const createdColumns = []
+
+      // Tạo từng column
+      for (const columnTemplate of columnsData) {
+        const columnData = {
+          boardId: boardId,
+          title: columnTemplate.title
+        }
+
+        const columnResponse = await authorizedAxiosInstance.post(`${API_ROOT}/v1/columns`, columnData)
+        const newColumn = columnResponse.data
+
+        // Tạo cards cho column
+        const createdCards = []
+        const cardOrderIds = []
+
+        if (columnTemplate.cards && columnTemplate.cards.length > 0) {
+          for (const cardTitle of columnTemplate.cards) {
+            const cardData = {
+              boardId: boardId,
+              columnId: newColumn._id,
+              title: cardTitle
+            }
+
+            try {
+              const cardResponse = await authorizedAxiosInstance.post(`${API_ROOT}/v1/cards`, cardData)
+              const newCard = cardResponse.data
+              createdCards.push(newCard)
+              cardOrderIds.push(newCard._id)
+            } catch (cardError) {
+              console.warn(`Failed to create card "${cardTitle}":`, cardError)
+            }
+          }
+        }
+
+        // Nếu không có card nào, tạo placeholder card
+        if (createdCards.length === 0) {
+          const placeholderCard = generatePlaceholderCard(newColumn)
+          createdCards.push(placeholderCard)
+          cardOrderIds.push(placeholderCard._id)
+        }
+
+        // Cập nhật column với cardOrderIds
+        if (cardOrderIds.length > 0) {
+          try {
+            await authorizedAxiosInstance.put(`${API_ROOT}/v1/columns/${newColumn._id}`, {
+              cardOrderIds
+            })
+          } catch (updateError) {
+            console.warn(`Failed to update column ${newColumn._id} with cardOrderIds:`, updateError)
+          }
+        }
+
+        newColumn.cards = createdCards
+        newColumn.cardOrderIds = cardOrderIds
+        createdColumns.push(newColumn)
+      }
+
+      // Cập nhật board với columnOrderIds mới
+      const currentColumnOrderIds = currentBoard.columnOrderIds || []
+      const newColumnOrderIds = [...currentColumnOrderIds, ...createdColumns.map(col => col._id)]
+
+      await authorizedAxiosInstance.put(`${API_ROOT}/v1/boards/${boardId}`, {
+        columnOrderIds: newColumnOrderIds
+      })
+
+      return {
+        boardId,
+        newColumns: createdColumns,
+        newColumnOrderIds
+      }
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
 // Các hành động gọi api (bất đồng bộ) và cập nhật dữ liệu vào Redux, dùng Middleware createAsyncThunk đi kèm với extraReducers
+// 6. Thêm async thunk vào activeBoardSlice.js
+export const deleteCardAPI = createAsyncThunk(
+  'activeBoard/deleteCardAPI',
+  async (cardId, { rejectWithValue }) => {
+    try {
+      const response = await authorizedAxiosInstance.delete(`${API_ROOT}/v1/cards/${cardId}`)
+      return { cardId, ...response.data }
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
 export const fetchBoardDetailsAPI = createAsyncThunk(
   'activeBoard/fetchBoardDetailsAPI',
   async (boardId) => {
@@ -138,14 +238,14 @@ export const createBoardFromTemplate = createAsyncThunk(
           boardId: newBoard._id,
           title: columnTemplate.title
         }
-        
+
         const columnResponse = await authorizedAxiosInstance.post(`${API_ROOT}/v1/columns`, columnData)
         const newColumn = columnResponse.data
-        
+
         // Tạo sample cards cho column
         const createdCards = []
         const cardOrderIds = []
-        
+
         if (columnTemplate.sampleCards && columnTemplate.sampleCards.length > 0) {
           for (const cardTitle of columnTemplate.sampleCards) {
             const cardData = {
@@ -153,7 +253,7 @@ export const createBoardFromTemplate = createAsyncThunk(
               columnId: newColumn._id,
               title: cardTitle
             }
-            
+
             try {
               const cardResponse = await authorizedAxiosInstance.post(`${API_ROOT}/v1/cards`, cardData)
               const newCard = cardResponse.data
@@ -165,14 +265,14 @@ export const createBoardFromTemplate = createAsyncThunk(
             }
           }
         }
-        
+
         // Nếu không có card nào được tạo hoặc không có sample cards, thêm placeholder card
         if (createdCards.length === 0) {
           const placeholderCard = generatePlaceholderCard(newColumn)
           createdCards.push(placeholderCard)
           cardOrderIds.push(placeholderCard._id)
         }
-        
+
         // Cập nhật column với cardOrderIds
         if (cardOrderIds.length > 0) {
           try {
@@ -183,10 +283,10 @@ export const createBoardFromTemplate = createAsyncThunk(
             console.warn(`Failed to update column ${newColumn._id} with cardOrderIds:`, updateError)
           }
         }
-        
+
         newColumn.cards = createdCards
         newColumn.cardOrderIds = cardOrderIds
-        
+
         createdColumns.push(newColumn)
       }
 
@@ -251,7 +351,7 @@ export const activeBoardSlice = createSlice({
       }
 
       const { currentUserId, showMyCardsOnly } = state.cardFilter
-      
+
       // Áp dụng filter cho từng column
       state.currentActiveBoard.columns.forEach(column => {
         // Lưu trữ cards gốc nếu chưa có
@@ -259,12 +359,12 @@ export const activeBoardSlice = createSlice({
           column.originalCards = [...column.cards]
           column.originalCardOrderIds = [...column.cardOrderIds]
         }
-        
+
         // Filter cards
         const filteredCards = filterCardsForUser(column.originalCards, currentUserId, showMyCardsOnly)
         column.cards = filteredCards
         column.cardOrderIds = filteredCards.map(card => card._id)
-        
+
         // Nếu không có card nào sau khi filter, thêm placeholder
         if (filteredCards.length === 0) {
           const placeholderCard = generatePlaceholderCard(column)
@@ -273,13 +373,22 @@ export const activeBoardSlice = createSlice({
         }
       })
     },
+    // Thêm reducer mới để cập nhật board hiện tại với columns mới
+    addColumnsToCurrentBoardSuccess: (state, action) => {
+      const { newColumns, newColumnOrderIds } = action.payload
+      if (state.currentActiveBoard) {
+        // Thêm columns mới vào board hiện tại
+        state.currentActiveBoard.columns = [...state.currentActiveBoard.columns, ...newColumns]
+        state.currentActiveBoard.columnOrderIds = newColumnOrderIds
+      }
+    },
     // Reducer để clear filter
     clearCardFilter: (state) => {
       state.cardFilter = {
         showMyCardsOnly: false,
         currentUserId: null
       }
-      
+
       if (state.currentActiveBoard) {
         // Khôi phục cards gốc
         state.currentActiveBoard.columns.forEach(column => {
@@ -294,6 +403,7 @@ export const activeBoardSlice = createSlice({
       }
     }
   },
+
   // extraReducers: Nơi xử lý dữ liệu bất đồng bộ
   extraReducers: (builder) => {
     builder
@@ -303,7 +413,7 @@ export const activeBoardSlice = createSlice({
         // Thành viên của Board sẽ là gộp lại của 2 mảng owners và members
         board.FE_allUsers = board.owners.concat(board.members)
         board.memberIds = board.FE_allUsers.map(user => user._id)
-        
+
         // Sắp xếp thứ tự các column ở đây trước khi đưa dữ liệu xuống bên dưới các component con
         board.columns = mapOrder(board.columns, board.columnOrderIds, '_id')
         board.columns.forEach(column => {
@@ -316,9 +426,9 @@ export const activeBoardSlice = createSlice({
             column.cards = mapOrder(column.cards, column.cardOrderIds, '_id')
           }
         })
-        
+
         state.currentActiveBoard = board
-        
+
         // Clear filter khi load board mới
         state.cardFilter = {
           showMyCardsOnly: false,
@@ -338,13 +448,51 @@ export const activeBoardSlice = createSlice({
         state.isCreatingBoard = false
         state.createBoardError = action.payload
       })
+            // Thêm cases mới cho addColumnsToCurrentBoard
+            .addCase(addColumnsToCurrentBoard.pending, (state) => {
+              state.isCreatingBoard = true
+              state.createBoardError = null
+            })
+            .addCase(addColumnsToCurrentBoard.fulfilled, (state, action) => {
+              state.isCreatingBoard = false
+              const { newColumns, newColumnOrderIds } = action.payload
+              if (state.currentActiveBoard) {
+                // Thêm columns mới vào board hiện tại
+                state.currentActiveBoard.columns = [...state.currentActiveBoard.columns, ...newColumns]
+                state.currentActiveBoard.columnOrderIds = newColumnOrderIds
+              }
+            })
+            .addCase(addColumnsToCurrentBoard.rejected, (state, action) => {
+              state.isCreatingBoard = false
+              state.createBoardError = action.payload
+            })
+      // 7. Thêm vào extraReducers trong activeBoardSlice.js
+      .addCase(deleteCardAPI.fulfilled, (state, action) => {
+        const deletedCardId = action.payload.cardId
+
+        // Tìm và xóa card khỏi column tương ứng
+        state.currentActiveBoard.columns.forEach(column => {
+          // Xóa card khỏi mảng cards
+          column.cards = column.cards.filter(card => card._id !== deletedCardId)
+
+          // Xóa cardId khỏi mảng cardOrderIds
+          column.cardOrderIds = column.cardOrderIds.filter(cardId => cardId !== deletedCardId)
+
+          // Nếu column trống sau khi xóa, thêm placeholder card
+          if (column.cards.length === 0) {
+            const placeholderCard = generatePlaceholderCard(column)
+            column.cards = [placeholderCard]
+            column.cardOrderIds = [placeholderCard._id]
+          }
+        })
+      })
   }
 })
 
 // Actions
-export const { 
-  updateCurrentActiveBoard, 
-  updateCardInBoard, 
+export const {
+  updateCurrentActiveBoard,
+  updateCardInBoard,
   clearCreateBoardError,
   updateCardFilter,
   applyCardFilter,
