@@ -10,13 +10,20 @@ import {
   List,
   ListItem,
   ListItemText,
-  Typography
+  Typography,
+  Chip,
+  Divider,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
 import CheckIcon from '@mui/icons-material/Check'
 import CancelIcon from '@mui/icons-material/Cancel'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { toast } from 'react-toastify'
@@ -25,8 +32,52 @@ import {
   addSingleEvaluationCriteria,
   deleteSingleEvaluationCriteria,
   updateSingleEvaluationCriteria,
-  fetchEvaluationCriteriaThunk // Sửa tên action cho đúng
+  fetchEvaluationCriteriaThunk
 } from '~/redux/activeEvaluation/activeEvaluationSlice'
+
+// Danh sách tiêu chí mẫu theo từng danh mục
+const SAMPLE_CRITERIA = {
+  'Kỹ năng mềm': [
+    'Kỹ năng giao tiếp',
+    'Khả năng làm việc nhóm',
+    'Khả năng lãnh đạo',
+    'Tư duy sáng tạo',
+    'Khả năng giải quyết vấn đề',
+    'Khả năng thích ứng',
+    'Quản lý thời gian',
+    'Kỹ năng thuyết trình'
+  ],
+  'Kỹ năng nghề nghiệp': [
+    'Kiến thức chuyên môn',
+    'Kỹ năng phân tích',
+    'Độ chính xác trong công việc',
+    'Khả năng học hỏi',
+    'Tính chủ động',
+    'Tinh thần trách nhiệm',
+    'Khả năng đổi mới',
+    'Hiệu quả công việc'
+  ],
+  'Thái độ làm việc': [
+    'Tinh thần trách nhiệm',
+    'Sự tận tâm',
+    'Tính kỷ luật',
+    'Khả năng chịu áp lực',
+    'Tinh thần hợp tác',
+    'Sự nhiệt tình',
+    'Tính kiên trì',
+    'Thái độ tích cực'
+  ],
+  'Kỹ năng kỹ thuật': [
+    'Kỹ năng lập trình',
+    'Khả năng thiết kế',
+    'Sử dụng công cụ',
+    'Tư duy logic',
+    'Khả năng debug',
+    'Hiểu biết công nghệ',
+    'Kỹ năng testing',
+    'Quản lý dự án'
+  ]
+}
 
 function EvaluationCriteriaEditor({ open, onClose, board }) {
   const dispatch = useDispatch()
@@ -39,6 +90,7 @@ function EvaluationCriteriaEditor({ open, onClose, board }) {
   const [isLoading, setIsLoading] = useState(false)
   const [hasSynced, setHasSynced] = useState(false)
   const [deletingIndex, setDeletingIndex] = useState(null)
+  const [addingCriteria, setAddingCriteria] = useState(new Set()) // Track các tiêu chí đang được thêm
 
   const inputRef = useRef()
   const mountedRef = useRef(true)
@@ -58,7 +110,7 @@ function EvaluationCriteriaEditor({ open, onClose, board }) {
         setIsLoading(true)
         try {
           console.log('🔄 Fetching evaluation criteria for board:', board._id)
-                     await dispatch(fetchEvaluationCriteriaThunk(board._id)).unwrap()
+          await dispatch(fetchEvaluationCriteriaThunk(board._id)).unwrap()
           setHasFetched(true)
         } catch (error) {
           console.error('❌ Error fetching criteria:', error)
@@ -101,8 +153,9 @@ function EvaluationCriteriaEditor({ open, onClose, board }) {
       setEditIndex(null)
       setHasFetched(false)
       setIsLoading(false)
-      setHasSynced(false) // Reset flag sync
+      setHasSynced(false)
       setDeletingIndex(null)
+      setAddingCriteria(new Set())
     }
   }, [open])
 
@@ -112,6 +165,53 @@ function EvaluationCriteriaEditor({ open, onClose, board }) {
       inputRef.current.focus()
     }
   }, [editIndex])
+
+  // Hàm thêm tiêu chí mẫu
+  const handleAddSampleCriterion = useCallback(async (criterionTitle) => {
+    if (!board?._id) {
+      toast.error('Không tìm thấy board ID', { theme: 'colored' })
+      return
+    }
+
+    // Kiểm tra trùng lặp
+    const isDuplicate = localCriteria.some(
+      item => item.title.toLowerCase() === criterionTitle.toLowerCase()
+    )
+    if (isDuplicate) {
+      toast.warn('Tiêu chí này đã tồn tại', { theme: 'colored' })
+      return
+    }
+
+    // Đánh dấu đang thêm
+    setAddingCriteria(prev => new Set([...prev, criterionTitle]))
+
+    try {
+      console.log('🚀 Adding sample criterion:', criterionTitle)
+      const actionResult = await dispatch(
+        addSingleEvaluationCriteria({ boardId: board._id, title: criterionTitle })
+      ).unwrap()
+
+      console.log('✅ Sample criterion added:', actionResult)
+
+      if (mountedRef.current) {
+        setLocalCriteria(prev => [...prev, actionResult])
+        toast.success(`Đã thêm tiêu chí "${criterionTitle}"`, { theme: 'colored' })
+      }
+    } catch (error) {
+      console.error('❌ Error adding sample criterion:', error)
+      if (mountedRef.current) {
+        toast.error(`Có lỗi khi thêm tiêu chí "${criterionTitle}"`, { theme: 'colored' })
+      }
+    } finally {
+      if (mountedRef.current) {
+        setAddingCriteria(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(criterionTitle)
+          return newSet
+        })
+      }
+    }
+  }, [localCriteria, board?._id, dispatch])
 
   const handleAddOrUpdateCriterion = useCallback(async () => {
     const trimmed = newCriterion.trim()
@@ -168,8 +268,6 @@ function EvaluationCriteriaEditor({ open, onClose, board }) {
 
         console.log('✅ Action result:', actionResult)
 
-        // Chỉ cập nhật local state, không cần sync với Redux store nữa
-        // vì Redux store sẽ được cập nhật bởi action trên
         if (mountedRef.current) {
           console.log('📝 Updating local state')
           setLocalCriteria(prev => {
@@ -248,7 +346,7 @@ function EvaluationCriteriaEditor({ open, onClose, board }) {
   }, [handleAddOrUpdateCriterion, editIndex, handleCancelEdit])
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         🎯 Thiết lập tiêu chí đánh giá
         {board?.title && (
@@ -258,6 +356,7 @@ function EvaluationCriteriaEditor({ open, onClose, board }) {
         )}
       </DialogTitle>
       <DialogContent dividers>
+        {/* Form thêm tiêu chí tùy chỉnh */}
         <Box display="flex" gap={1} alignItems="center" mb={2}>
           <TextField
             label={editIndex !== null ? 'Chỉnh sửa tiêu chí' : 'Tiêu chí mới'}
@@ -291,6 +390,65 @@ function EvaluationCriteriaEditor({ open, onClose, board }) {
             </IconButton>
           )}
         </Box>
+
+        <Divider sx={{ my: 2 }} />
+
+        {/* Tiêu chí mẫu */}
+        <Accordion defaultExpanded>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Box display="flex" alignItems="center" gap={1}>
+              <PlaylistAddIcon color="primary" />
+              <Typography variant="h6" color="primary">
+                Tiêu chí gợi ý
+              </Typography>
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Typography variant="body2" color="text.secondary" mb={2}>
+              Chọn các tiêu chí phù hợp với yêu cầu đánh giá của bạn. Nhấp vào tiêu chí để thêm ngay.
+            </Typography>
+            
+            {Object.entries(SAMPLE_CRITERIA).map(([category, criteria]) => (
+              <Box key={category} mb={3}>
+                <Typography variant="subtitle1" fontWeight="bold" mb={1} color="primary">
+                  {category}
+                </Typography>
+                <Box display="flex" flexWrap="wrap" gap={1}>
+                  {criteria.map((criterion) => {
+                    const isExisting = localCriteria.some(
+                      item => item.title.toLowerCase() === criterion.toLowerCase()
+                    )
+                    const isAdding = addingCriteria.has(criterion)
+                    
+                    return (
+                      <Chip
+                        key={criterion}
+                        label={criterion}
+                        onClick={() => !isExisting && !isAdding && handleAddSampleCriterion(criterion)}
+                        color={isExisting ? 'default' : 'primary'}
+                        variant={isExisting ? 'filled' : 'outlined'}
+                        disabled={isExisting || isAdding || isLoading}
+                        clickable={!isExisting && !isAdding}
+                        size="small"
+                        sx={{
+                          opacity: isExisting ? 0.5 : 1,
+                          cursor: isExisting ? 'default' : 'pointer'
+                        }}
+                      />
+                    )
+                  })}
+                </Box>
+              </Box>
+            ))}
+          </AccordionDetails>
+        </Accordion>
+
+        <Divider sx={{ my: 2 }} />
+
+        {/* Danh sách tiêu chí hiện tại */}
+        <Typography variant="h6" mb={1}>
+          Tiêu chí hiện tại ({localCriteria.length})
+        </Typography>
 
         {isLoading ? (
           <Box textAlign="center" py={4}>
@@ -348,7 +506,7 @@ function EvaluationCriteriaEditor({ open, onClose, board }) {
 
         {localCriteria.length > 0 && !isLoading && (
           <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
-            💡 Mẹo: Bấm Enter để thêm nhanh, Escape để hủy chỉnh sửa
+            💡 Mẹo: Bấm Enter để thêm nhanh, Escape để hủy chỉnh sửa. Nhấp vào tiêu chí gợi ý để thêm ngay.
           </Typography>
         )}
       </DialogContent>

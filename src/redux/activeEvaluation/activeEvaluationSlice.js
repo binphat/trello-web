@@ -84,7 +84,6 @@ export const deleteSingleEvaluationCriteria = createAsyncThunk(
   async (criteriaId, thunkAPI) => {
     try {
       const data = await deleteSingleEvaluationCriteriaAPI(criteriaId)
-      toast.success('Xóa tiêu chí thành công!', { theme: 'colored' })
       return { criteriaId, data }
     } catch (error) {
       toast.error('Xóa tiêu chí thất bại!', { theme: 'colored' })

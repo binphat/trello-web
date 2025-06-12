@@ -275,7 +275,6 @@ export const deleteSingleEvaluationCriteriaAPI = async (singleCriteriaId) => {
     const response = await authorizedAxiosInstance.delete(
       `${API_ROOT}/v1/single/${singleCriteriaId}`
     )
-    toast.success('Xóa tiêu chí thành công!', { theme: 'colored' })
     return response.data
   } catch (error) {
     toast.error('Xóa tiêu chí thất bại!', { theme: 'colored' })
