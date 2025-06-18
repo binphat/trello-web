@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import {
   Box,
@@ -18,13 +18,20 @@ import {
   Button,
   Chip,
   IconButton,
-  Tooltip
+  Tooltip,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText
 } from '@mui/material'
 import {
   Refresh as RefreshIcon,
   Download as DownloadIcon,
-  Visibility as ViewIcon
+  Visibility as ViewIcon,
+  FileDownload as FileDownloadIcon,
+  TableChart as TableChartIcon
 } from '@mui/icons-material'
+import * as XLSX from 'xlsx'
 import {
   selectBoardResults,
   selectDetailedLoading,
@@ -44,6 +51,10 @@ const RatingTab = () => {
   const summary = useSelector(selectSummary)
   const loading = useSelector(selectDetailedLoading)
   const error = useSelector(selectDetailedError)
+  
+  // State for export menu
+  const [exportAnchorEl, setExportAnchorEl] = useState(null)
+  const [isExporting, setIsExporting] = useState(false)
 
   // Fetch data on component mount
   useEffect(() => {
@@ -54,8 +65,130 @@ const RatingTab = () => {
     dispatch(refreshDetailedResultsThunk())
   }
 
-  const handleExport = () => {
+  const handleExportMenuOpen = (event) => {
+    setExportAnchorEl(event.currentTarget)
+  }
+
+  const handleExportMenuClose = () => {
+    setExportAnchorEl(null)
+  }
+
+  // Client-side Excel export function
+  const handleExportToExcel = async (format = 'detailed') => {
+    setIsExporting(true)
+    setExportAnchorEl(null)
+    
+    try {
+      // Prepare data for export
+      const exportData = []
+      
+      if (format === 'detailed') {
+        // Detailed export with all ratings
+        boardResults.forEach(boardResult => {
+          boardResult.evaluations?.forEach(evaluation => {
+            evaluation.ratings?.forEach(rating => {
+              // Find criterion information
+              let criterion = null
+              if (boardResult.criteria) {
+                criterion = boardResult.criteria.find(c =>
+                  c._id?.toString() === rating.criterion?.toString() ||
+                  c._id?.toString() === rating.criterionId?.toString()
+                )
+              }
+              
+              if (!criterion && rating.criterion && typeof rating.criterion === 'object') {
+                criterion = rating.criterion
+              }
+              
+              if (!criterion && rating.criterionName) {
+                criterion = { name: rating.criterionName, title: rating.criterionTitle }
+              }
+
+              exportData.push({
+                'Tên Bảng': boardResult.board?.title || 'Bảng không tên',
+                'ID Bảng': boardResult.board?._id || '',
+                'Tiêu Chí': criterion?.title || criterion?.name || rating.criterionName || `Tiêu chí #${exportData.length + 1}`,
+                'Điểm Số': rating.score || 0,
+                'Người Đánh Giá': evaluation.evaluator?.displayName || evaluation.evaluator?.username || evaluation.evaluatorName || 'Ẩn danh',
+                'Email Người Đánh Giá': evaluation.evaluator?.email || '',
+                'Ngày Đánh Giá': evaluation.createdAt ? new Date(evaluation.createdAt).toLocaleDateString('vi-VN') : '',
+                'Giờ Đánh Giá': evaluation.createdAt ? new Date(evaluation.createdAt).toLocaleTimeString('vi-VN') : '',
+                'Trạng Thái': evaluation.status || 'Hoàn thành'
+              })
+            })
+          })
+        })
+      } else if (format === 'summary') {
+        // Summary export with board averages
+        boardResults.forEach(boardResult => {
+          const boardEvaluations = boardResult.evaluations || []
+          const totalRatings = boardEvaluations.reduce((acc, eva) => acc + (eva.ratings?.length || 0), 0)
+          const totalScore = boardEvaluations.reduce((acc, eva) => {
+            return acc + (eva.ratings?.reduce((sum, rating) => sum + (rating.score || 0), 0) || 0)
+          }, 0)
+          const averageScore = totalRatings > 0 ? (totalScore / totalRatings).toFixed(2) : 0
+
+          exportData.push({
+            'Tên Bảng': boardResult.board?.title || 'Bảng không tên',
+            'ID Bảng': boardResult.board?._id || '',
+            'Số Lượng Đánh Giá': boardEvaluations.length,
+            'Tổng Số Tiêu Chí Được Đánh Giá': totalRatings,
+            'Điểm Trung Bình': averageScore,
+            'Ngày Tạo Bảng': boardResult.board?.createdAt ? new Date(boardResult.board.createdAt).toLocaleDateString('vi-VN') : '',
+            'Người Tạo Bảng': boardResult.board?.creator?.displayName || boardResult.board?.creator?.username || '',
+            'Trạng Thái Bảng': boardResult.board?.status || 'Hoạt động'
+          })
+        })
+      }
+
+      // Create workbook and worksheet
+      const workbook = XLSX.utils.book_new()
+      const worksheet = XLSX.utils.json_to_sheet(exportData)
+
+      // Set column widths
+      const columnWidths = Object.keys(exportData[0] || {}).map(key => ({
+        wch: Math.max(key.length, 15)
+      }))
+      worksheet['!cols'] = columnWidths
+
+      // Add worksheet to workbook
+      const sheetName = format === 'detailed' ? 'Chi Tiết Đánh Giá' : 'Tổng Hợp Đánh Giá'
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
+
+      // Add summary sheet if detailed export
+      if (format === 'detailed' && summary) {
+        const summaryData = [
+          { 'Thông Tin': 'Tổng số bảng', 'Giá Trị': summary.totalBoards || 0 },
+          { 'Thông Tin': 'Tổng số đánh giá', 'Giá Trị': summary.totalEvaluations || 0 },
+          { 'Thông Tin': 'Điểm trung bình tổng thể', 'Giá Trị': summary.overallAverage ? summary.overallAverage.toFixed(2) : 'N/A' },
+          { 'Thông Tin': 'Ngày xuất báo cáo', 'Giá Trị': new Date().toLocaleString('vi-VN') }
+        ]
+        const summarySheet = XLSX.utils.json_to_sheet(summaryData)
+        XLSX.utils.book_append_sheet(workbook, summarySheet, 'Tổng Quan')
+      }
+
+      // Generate filename
+      const timestamp = new Date().toISOString().slice(0, 10)
+      const filename = `DanhGia_${format === 'detailed' ? 'ChiTiet' : 'TongHop'}_${timestamp}.xlsx`
+
+      // Save file
+      XLSX.writeFile(workbook, filename)
+
+      // Show success message (you might want to use a toast notification instead)
+      console.log(`Đã xuất file Excel: ${filename}`)
+      
+    } catch (error) {
+      console.error('Lỗi khi xuất Excel:', error)
+      // You might want to show an error notification here
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  // Server-side export (using existing Redux action)
+  const handleServerExport = () => {
     dispatch(exportEvaluationResultsThunk({ format: 'excel' }))
+    setExportAnchorEl(null)
   }
 
   const handleViewBoardDetails = (boardId) => {
@@ -125,16 +258,36 @@ const RatingTab = () => {
         </Box>
         
         <Box>
-          <Tooltip title="Tải lại dữ liệu">
-            <IconButton onClick={handleRefresh}>
-              <RefreshIcon />
+          <Tooltip title="Xuất dữ liệu">
+            <IconButton 
+              onClick={handleExportMenuOpen}
+              disabled={isExporting}
+            >
+              {isExporting ? <CircularProgress size={24} /> : <DownloadIcon />}
             </IconButton>
           </Tooltip>
-          <Tooltip title="Xuất Excel">
-            <IconButton onClick={handleExport}>
-              <DownloadIcon />
-            </IconButton>
-          </Tooltip>
+          
+          {/* Export Menu */}
+          <Menu
+            anchorEl={exportAnchorEl}
+            open={Boolean(exportAnchorEl)}
+            onClose={handleExportMenuClose}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'right',
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+          >
+            <MenuItem onClick={() => handleExportToExcel('detailed')}>
+              <ListItemIcon>
+                <TableChartIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Excel" secondary="Tất cả đánh giá và tiêu chí" />
+            </MenuItem>
+          </Menu>
         </Box>
       </Box>
 
@@ -248,7 +401,6 @@ const RatingTab = () => {
                             {criterion.description}
                           </Typography>
                         )}
-                        {/* Debug info - remove in production */}
                       </TableCell>
                       <TableCell align="center">
                         <Chip
@@ -293,4 +445,4 @@ const RatingTab = () => {
   )
 }
 
-export default RatingTab  
+export default RatingTab
