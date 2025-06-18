@@ -30,6 +30,7 @@
     "@uiw/react-md-editor": "^4.0.3",
     "axios": "^1.5.1",
     "cross-env": "7.0.3",
+    "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
     "graphql": "^16.11.0",
     "lodash": "^4.17.21",

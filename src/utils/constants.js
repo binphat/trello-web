@@ -21,9 +21,4 @@ export const CARD_MEMBER_ACTIONS = {
   ADD: 'ADD',
   REMOVE: 'REMOVE'
 }
-export const criteria = [
-  { id: 'teamwork', label: 'Khả năng làm việc nhóm' },
-  { id: 'creativity', label: 'Tư duy sáng tạo' },
-  { id: 'responsibility', label: 'Tinh thần trách nhiệm' },
-  { id: 'communication', label: 'Kỹ năng giao tiếp' }
-]
+

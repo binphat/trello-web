@@ -1,6 +1,7 @@
 import authorizedAxiosInstance from '~/utils/authorizeAxios'
 import { API_ROOT } from '~/utils/constants'
 import { toast } from 'react-toastify'
+import { DEFAULT_ITEMS_PER_PAGE } from '~/utils/constants'
 // Board
 // Đã move vào redux
 // export const fetchBoardDetailsAPI = async (boardId) => {
@@ -312,6 +313,39 @@ export const checkSpellingAPI = async (text, language = 'auto') => {
     return response.data
   } catch (error) {
     console.error('Spell check API error:', error)
+    throw error
+  }
+}
+
+// ✅ API function đã sửa
+export const fetchAllBoards = async (queryParams = {}) => {
+  try {
+    const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/boards/admin/all`, {
+      params: {
+        page: queryParams.page || 1,
+        itemsPerPage: queryParams.itemsPerPage || DEFAULT_ITEMS_PER_PAGE,
+        ...(queryParams.q && { q: queryParams.q }) // Chỉ thêm q nếu có search query
+      }
+    })
+    return response.data
+  } catch (error) {
+    console.error('❌ Error in fetchAllBoards:', error)
+    throw error
+  }
+}
+// Thêm vào file apis/index.js
+export const fetchAllUsers = async (queryParams = {}) => {
+  try {
+    const response = await authorizedAxiosInstance.get(`${API_ROOT}/v1/users/all`, {
+      params: {
+        page: queryParams.page || 1,
+        limit: queryParams.limit || DEFAULT_ITEMS_PER_PAGE,
+        ...(queryParams.search && { search: queryParams.search }) // Chỉ thêm search nếu có
+      }
+    })
+    return response.data
+  } catch (error) {
+    console.error('❌ Error in fetchAllUsers:', error)
     throw error
   }
 }

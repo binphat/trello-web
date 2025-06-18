@@ -448,24 +448,24 @@ export const activeBoardSlice = createSlice({
         state.isCreatingBoard = false
         state.createBoardError = action.payload
       })
-            // Thêm cases mới cho addColumnsToCurrentBoard
-            .addCase(addColumnsToCurrentBoard.pending, (state) => {
-              state.isCreatingBoard = true
-              state.createBoardError = null
-            })
-            .addCase(addColumnsToCurrentBoard.fulfilled, (state, action) => {
-              state.isCreatingBoard = false
-              const { newColumns, newColumnOrderIds } = action.payload
-              if (state.currentActiveBoard) {
-                // Thêm columns mới vào board hiện tại
-                state.currentActiveBoard.columns = [...state.currentActiveBoard.columns, ...newColumns]
-                state.currentActiveBoard.columnOrderIds = newColumnOrderIds
-              }
-            })
-            .addCase(addColumnsToCurrentBoard.rejected, (state, action) => {
-              state.isCreatingBoard = false
-              state.createBoardError = action.payload
-            })
+    // Thêm cases mới cho addColumnsToCurrentBoard
+      .addCase(addColumnsToCurrentBoard.pending, (state) => {
+        state.isCreatingBoard = true
+        state.createBoardError = null
+      })
+      .addCase(addColumnsToCurrentBoard.fulfilled, (state, action) => {
+        state.isCreatingBoard = false
+        const { newColumns, newColumnOrderIds } = action.payload
+        if (state.currentActiveBoard) {
+          // Thêm columns mới vào board hiện tại
+          state.currentActiveBoard.columns = [...state.currentActiveBoard.columns, ...newColumns]
+          state.currentActiveBoard.columnOrderIds = newColumnOrderIds
+        }
+      })
+      .addCase(addColumnsToCurrentBoard.rejected, (state, action) => {
+        state.isCreatingBoard = false
+        state.createBoardError = action.payload
+      })
       // 7. Thêm vào extraReducers trong activeBoardSlice.js
       .addCase(deleteCardAPI.fulfilled, (state, action) => {
         const deletedCardId = action.payload.cardId
