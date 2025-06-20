@@ -106,7 +106,6 @@ const RatingTab = () => {
 
               exportData.push({
                 'Tên Bảng': boardResult.board?.title || 'Bảng không tên',
-                'ID Bảng': boardResult.board?._id || '',
                 'Tiêu Chí': criterion?.title || criterion?.name || rating.criterionName || `Tiêu chí #${exportData.length + 1}`,
                 'Điểm Số': rating.score || 0,
                 'Người Đánh Giá': evaluation.evaluator?.displayName || evaluation.evaluator?.username || evaluation.evaluatorName || 'Ẩn danh',
